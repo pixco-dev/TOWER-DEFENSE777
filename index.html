@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#131827" />
+  <title>털뭉치 전선</title>
+  <link rel="stylesheet" href="styles.css?v=19" />
+</head>
+<body>
+  <section id="title-screen" class="title-screen">
+    <div class="title-shade"></div>
+    <div class="title-content">
+      <div class="pixel-logo">
+        <span class="logo-kicker">MOONLIGHT FRONTIER</span>
+        <h1>털뭉치<br /><b>전선</b></h1>
+        <p>달빛 아래, 마지막 성을 지켜라</p>
+      </div>
+
+      <div class="title-menu">
+        <div class="stage-board">
+          <span class="board-label">스테이지 선택</span>
+          <div id="stage-list" class="stage-list"></div>
+        </div>
+        <button id="game-start-btn" class="title-start" type="button">
+          <span>전투 시작</span>
+          <small>ENTER</small>
+        </button>
+        <button id="deck-btn" class="title-sub deck-menu-btn" type="button">
+          <span>출격 덱 편성</span>
+          <b id="deck-summary">5 / 10</b>
+        </button>
+        <button id="how-btn" class="title-sub" type="button">조작법 보기</button>
+        <button id="chest-btn" class="title-sub chest-menu-btn" type="button">
+          보급 상자 <b id="chest-count">0</b>
+          <small id="collection-count">5 / 15 보유</small>
+        </button>
+        <button id="cloud-save-btn" class="title-sub cloud-save-btn" type="button">
+          <span>Google 클라우드 저장</span>
+          <b id="cloud-save-status" data-state="setup">설정 확인 중…</b>
+        </button>
+      </div>
+
+      <div id="how-panel" class="how-panel hidden">
+        <button id="how-close-btn" type="button">×</button>
+        <h2>조작법</h2>
+        <div class="how-grid">
+          <span><kbd>1</kbd>~<kbd>9</kbd> <kbd>0</kbd><b>유닛 출격</b></span>
+          <span><kbd>W</kbd><b>골드 생산 강화</b></span>
+          <span><kbd>Space</kbd><b>성채 대포 발사</b></span>
+          <span><kbd>Q</kbd><b>달빛 지휘 발동</b></span>
+          <span><kbd>P</kbd><b>일시정지</b></span>
+          <span><kbd>H</kbd><b>스테이지 선택으로</b></span>
+        </div>
+      </div>
+
+      <div id="deck-panel" class="how-panel deck-panel hidden">
+        <button id="deck-close-btn" class="modal-close" type="button" aria-label="덱 편성 닫기">×</button>
+        <div class="deck-heading">
+          <div>
+            <span>MOONLIGHT SQUAD</span>
+            <h2>출격 덱 편성</h2>
+            <p>보유 대원 중 전투에 데려갈 대원을 선택하세요.</p>
+          </div>
+          <div class="deck-status">
+            <strong id="deck-count">5 / 10</strong>
+            <div class="upgrade-wallet">
+              <span>보급 G <b id="profile-gold">300</b></span>
+              <span>강화석 <b id="material-count">8</b></span>
+            </div>
+          </div>
+        </div>
+        <div id="deck-list" class="deck-list"></div>
+        <div class="deck-actions">
+          <small>선택한 순서가 전투 단축키 순서가 됩니다.</small>
+          <button id="deck-done-btn" class="primary-btn" type="button">편성 완료</button>
+        </div>
+      </div>
+
+      <div id="chest-panel" class="how-panel chest-panel hidden">
+        <button id="chest-close-btn" class="modal-close" type="button" aria-label="상자 닫기">×</button>
+        <h2>달빛 보급 상자</h2>
+        <div class="chest-visual" aria-hidden="true">✦</div>
+        <div class="chest-odds" aria-label="상자 보상 확률">
+          <span><b>45%</b> 캐릭터</span>
+          <span><b>30%</b> 강화석</span>
+          <span><b>20%</b> 보급 골드</span>
+          <span><b>5%</b> 훈련서</span>
+        </div>
+        <p id="chest-desc">캐릭터, 강화 재료, 보급 골드 중 하나를 획득합니다.</p>
+        <button id="chest-open-btn" class="primary-btn" type="button">상자 열기</button>
+      </div>
+
+      <span class="title-version">MOONLIGHT SQUAD · v4.8</span>
+    </div>
+  </section>
+
+  <main class="game-shell">
+    <section class="battle-frame">
+      <div class="battle-hud">
+        <div class="base-status ally">
+          <span class="crest">P1</span>
+          <div>
+            <span>털뭉치 성</span>
+            <strong id="player-hp">3500 / 3500</strong>
+          </div>
+          <div class="hp-track"><i id="player-hp-bar"></i></div>
+        </div>
+
+        <div class="stage-badge">
+          <span>STAGE</span>
+          <strong id="stage-label">1-1</strong>
+          <small id="stage-name">어둠이 내린 초원</small>
+          <em id="stage-progress">적 0 / 12</em>
+          <em id="wave-label" class="wave-label">WAVE 1 / 3</em>
+        </div>
+
+        <div class="base-status enemy">
+          <div>
+            <span>가시왕 성채</span>
+            <strong id="enemy-hp">3200 / 3200</strong>
+          </div>
+          <span class="crest">B</span>
+          <div class="hp-track"><i id="enemy-hp-bar"></i></div>
+        </div>
+
+        <div class="hud-tools">
+          <button id="home-btn" class="round-btn home-btn" type="button" aria-label="스테이지 선택으로 돌아가기">H</button>
+          <button id="sound-btn" class="round-btn" type="button" aria-label="효과음 켜기/끄기">SFX</button>
+          <button id="pause-btn" class="round-btn" type="button" aria-label="일시정지">Ⅱ</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="game" width="1280" height="720" aria-label="털뭉치 전선 게임 화면"></canvas>
+        <div id="message" class="battle-message hidden"></div>
+        <div id="combo-badge" class="combo-badge hidden">
+          <strong id="combo-count">2</strong>
+          <span>COMBO</span>
+        </div>
+        <div id="overlay" class="overlay hidden">
+          <div class="start-card">
+            <span class="eyebrow">ORIGINAL SIDE BATTLE</span>
+            <h2 id="overlay-title">털뭉치 전선</h2>
+            <p id="overlay-desc">유닛을 출격시켜 적의 성채를 무너뜨리세요.</p>
+            <div class="start-tips hidden" id="overlay-tips">
+              <span><b>1</b> 아래 카드를 눌러 출격</span>
+              <span><b>2</b> 골드 생산소를 강화</span>
+              <span><b>3</b> 대포로 위기를 돌파</span>
+            </div>
+            <div class="overlay-actions">
+              <button id="overlay-btn" class="primary-btn" type="button">다음 스테이지</button>
+              <button id="overlay-menu-btn" class="ghost-btn" type="button">스테이지 선택</button>
+            </div>
+          </div>
+        </div>
+        <div id="pause-layer" class="pause-layer hidden">
+          <strong>일시정지</strong>
+          <span>계속하려면 상단 버튼을 누르세요</span>
+        </div>
+      </div>
+
+      <div class="command-bar">
+        <div class="cmd-economy">
+          <div class="money">
+            <span>골드 <b id="money">0</b>/<em id="money-max">1200</em></span>
+            <strong id="income">24 G/s</strong>
+          </div>
+          <button id="worker-btn" class="worker-card" type="button">
+            <span class="worker-icon">UP</span>
+            <span class="worker-copy">
+              <small>생산소</small>
+              <strong id="worker-level">Lv.1</strong>
+            </span>
+            <span id="worker-cost" class="worker-cost">160 G</span>
+          </button>
+        </div>
+
+        <div id="unit-list" class="unit-list"></div>
+
+        <button id="cannon-btn" class="cannon-card" type="button">
+          <span class="cannon-icon">FIRE</span>
+          <span>
+            <small>성채 대포</small>
+            <strong id="cannon-state">준비 중</strong>
+          </span>
+          <i id="cannon-gauge"></i>
+        </button>
+
+        <button id="command-btn" class="command-card" type="button">
+          <span class="command-icon">Q</span>
+          <span>
+            <small>달빛 지휘</small>
+            <strong id="command-state">0%</strong>
+          </span>
+          <i id="command-gauge"></i>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script src="firebase-config.js?v=2"></script>
+  <script type="module" src="firebase-save.js?v=1"></script>
+  <script src="game.js?v=22"></script>
+</body>
+</html>

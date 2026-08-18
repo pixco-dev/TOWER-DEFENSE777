@@ -1,0 +1,2832 @@
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  let W = 1280;
+  let H = 720;
+  let GROUND = 605;
+  let PLAYER_BASE_X = 105;
+  let ENEMY_BASE_X = 1175;
+  let BATTLE_START = 178;
+  let BATTLE_END = 1102;
+  let VIEW_SCALE = 1;
+  let outputScale = 1;
+  const FIGHTER_SCALE = 0.72;
+
+  function layoutBattle() {
+    const wrap = canvas.parentElement;
+    let cssW = Math.round(wrap.clientWidth || window.innerWidth);
+    let cssH = Math.round(wrap.clientHeight || window.innerHeight);
+    if (cssW < 64 || cssH < 64) {
+      cssW = Math.max(1, Math.round(window.innerWidth));
+      cssH = Math.max(1, Math.round(window.innerHeight));
+    }
+    outputScale = Math.min(window.devicePixelRatio || 1, 2);
+    const nextW = Math.max(1, Math.floor(cssW * outputScale));
+    const nextH = Math.max(1, Math.floor(cssH * outputScale));
+    if (canvas.width !== nextW || canvas.height !== nextH) {
+      canvas.width = nextW;
+      canvas.height = nextH;
+    }
+    canvas.style.width = `${cssW}px`;
+    canvas.style.height = `${cssH}px`;
+    ctx.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    W = cssW;
+    H = cssH;
+    VIEW_SCALE = Math.min(W / 1280, H / 720);
+    GROUND = Math.round(H - 128);
+    PLAYER_BASE_X = Math.round(Math.max(110, 120 * VIEW_SCALE));
+    ENEMY_BASE_X = W - PLAYER_BASE_X;
+    BATTLE_START = PLAYER_BASE_X + Math.round(80 * VIEW_SCALE);
+    BATTLE_END = ENEMY_BASE_X - Math.round(80 * VIEW_SCALE);
+  }
+
+  const ui = {
+    titleScreen: document.getElementById("title-screen"),
+    gameStartBtn: document.getElementById("game-start-btn"),
+    howBtn: document.getElementById("how-btn"),
+    howPanel: document.getElementById("how-panel"),
+    howCloseBtn: document.getElementById("how-close-btn"),
+    deckBtn: document.getElementById("deck-btn"),
+    deckPanel: document.getElementById("deck-panel"),
+    deckCloseBtn: document.getElementById("deck-close-btn"),
+    deckDoneBtn: document.getElementById("deck-done-btn"),
+    deckList: document.getElementById("deck-list"),
+    deckCount: document.getElementById("deck-count"),
+    deckSummary: document.getElementById("deck-summary"),
+    profileGold: document.getElementById("profile-gold"),
+    materialCount: document.getElementById("material-count"),
+    chestBtn: document.getElementById("chest-btn"),
+    chestPanel: document.getElementById("chest-panel"),
+    chestCloseBtn: document.getElementById("chest-close-btn"),
+    chestOpenBtn: document.getElementById("chest-open-btn"),
+    chestCount: document.getElementById("chest-count"),
+    collectionCount: document.getElementById("collection-count"),
+    chestDesc: document.getElementById("chest-desc"),
+    cloudSaveBtn: document.getElementById("cloud-save-btn"),
+    cloudSaveStatus: document.getElementById("cloud-save-status"),
+    playerHp: document.getElementById("player-hp"),
+    playerHpBar: document.getElementById("player-hp-bar"),
+    enemyHp: document.getElementById("enemy-hp"),
+    enemyHpBar: document.getElementById("enemy-hp-bar"),
+    money: document.getElementById("money"),
+    moneyMax: document.getElementById("money-max"),
+    income: document.getElementById("income"),
+    workerBtn: document.getElementById("worker-btn"),
+    workerLevel: document.getElementById("worker-level"),
+    workerCost: document.getElementById("worker-cost"),
+    cannonBtn: document.getElementById("cannon-btn"),
+    cannonGauge: document.getElementById("cannon-gauge"),
+    cannonState: document.getElementById("cannon-state"),
+    commandBtn: document.getElementById("command-btn"),
+    commandGauge: document.getElementById("command-gauge"),
+    commandState: document.getElementById("command-state"),
+    unitList: document.getElementById("unit-list"),
+    overlay: document.getElementById("overlay"),
+    overlayTitle: document.getElementById("overlay-title"),
+    overlayDesc: document.getElementById("overlay-desc"),
+    overlayBtn: document.getElementById("overlay-btn"),
+    pauseBtn: document.getElementById("pause-btn"),
+    homeBtn: document.getElementById("home-btn"),
+    pauseLayer: document.getElementById("pause-layer"),
+    soundBtn: document.getElementById("sound-btn"),
+    message: document.getElementById("message"),
+    stageList: document.getElementById("stage-list"),
+    stageLabel: document.getElementById("stage-label"),
+    stageName: document.getElementById("stage-name"),
+    stageProgress: document.getElementById("stage-progress"),
+    waveLabel: document.getElementById("wave-label"),
+    comboBadge: document.getElementById("combo-badge"),
+    comboCount: document.getElementById("combo-count"),
+    overlayMenuBtn: document.getElementById("overlay-menu-btn"),
+  };
+
+  ctx.imageSmoothingEnabled = false;
+
+  const stageBackgrounds = Array.from({ length: 8 }, () => new Image());
+  const bg = stageBackgrounds[0];
+  const allySheet = new Image();
+  const unlockableSheet = new Image();
+  const rockShieldSheet = new Image();
+  const enemySheet = new Image();
+  let allyPixels = null;
+  let unlockablePixels = null;
+  let rockShieldPixels = null;
+  let enemyPixels = null;
+
+  const STAGE_BACKGROUND_FILES = [
+    "assets/pixel-battlefield-night.png",
+    "assets/pixel-stage-ch2-pine-v1.png",
+    "assets/pixel-stage-ch3-swamp-v1.png",
+    "assets/pixel-stage-ch4-ruins-v1.png",
+    "assets/pixel-stage-ch5-siege-v1.png",
+    "assets/pixel-stage-ch6-palace-v1.png",
+    "assets/pixel-stage-ch7-fortress-v1.png",
+    "assets/pixel-stage-ch8-throne-v1.png",
+  ];
+  stageBackgrounds.forEach((image, index) => {
+    image.src = STAGE_BACKGROUND_FILES[index];
+  });
+  allySheet.src = "assets/pixel-allies-keyed.png";
+  unlockableSheet.src = "assets/pixel-allies-unlockables-v4.png";
+  rockShieldSheet.src = "assets/pixel-ally-rockshield-v1.png";
+  enemySheet.src = "assets/pixel-enemies-keyed.png";
+
+  const EXTRA_ALLY_SPRITES = {
+    lightning_otter: { image: new Image(), src: "assets/pixel-ally-lightning-otter-v1.png", crop: [18, 107, 366, 380] },
+    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v1.png", crop: [18, 124, 366, 380] },
+    herb_hedgehog: { image: new Image(), src: "assets/pixel-ally-herb-hedgehog-v1.png", crop: [18, 106, 366, 380] },
+  };
+  const EXTRA_ENEMY_SPRITES = {
+    bloodwing_bat: { image: new Image(), src: "assets/pixel-enemy-bloodwing-bat-v2.png", crop: [18, 164, 366, 380] },
+    bone_raven: { image: new Image(), src: "assets/pixel-enemy-bone-raven-v3.png", crop: [18, 109, 366, 380] },
+    siege_rhino: { image: new Image(), src: "assets/pixel-enemy-siege-rhino-v2.png", crop: [18, 182, 366, 380] },
+    mooncap_witch: { image: new Image(), src: "assets/pixel-enemy-mooncap-witch-v2.png", crop: [18, 58, 366, 380] },
+  };
+  for (const sprite of Object.values(EXTRA_ALLY_SPRITES)) {
+    sprite.image.src = sprite.src;
+    sprite.image.addEventListener("load", () => {
+      renderCardPortraits();
+      renderDeckBuilder();
+    });
+  }
+  for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) sprite.image.src = sprite.src;
+
+  const ALLY_CROPS = [
+    [12, 345, 303, 675],
+    [308, 323, 600, 675],
+    [612, 348, 923, 675],
+    [927, 315, 1218, 675],
+    [1226, 308, 1527, 678],
+  ];
+  const ENEMY_CROPS = [
+    [42, 528, 312, 803],
+    [315, 458, 672, 803],
+    [668, 308, 1058, 807],
+    [1065, 273, 1493, 810],
+  ];
+
+  const UNLOCKABLE_SPRITE_INDEX = {
+    moon_cleric: 0, night_fox: 1, frost_owl: 2, sun_lion: 3, raccoon_bomber: 4,
+    lynx_sniper: 5, wolverine: 6, armadillo: 7, monkey_drummer: 8, squirrel_scout: 9,
+  };
+  const UNLOCKABLE_CROPS = [
+    [5, 155, 306, 470], [312, 175, 610, 470], [614, 175, 912, 470],
+    [913, 135, 1236, 470], [1237, 200, 1536, 470],
+    [0, 570, 307, 860], [312, 573, 608, 860], [629, 570, 907, 860],
+    [928, 585, 1221, 860], [1222, 594, 1536, 860],
+  ];
+  const ROCK_SHIELD_CROP = [205, 242, 1049, 981];
+
+  function removeAtlasBackground(image) {
+    const surface = document.createElement("canvas");
+    surface.width = image.naturalWidth;
+    surface.height = image.naturalHeight;
+    const surfaceCtx = surface.getContext("2d", { willReadFrequently: true });
+    surfaceCtx.drawImage(image, 0, 0);
+    const frame = surfaceCtx.getImageData(0, 0, surface.width, surface.height);
+    const pixels = frame.data;
+    const total = surface.width * surface.height;
+    const visited = new Uint8Array(total);
+    const queue = new Int32Array(total);
+    let head = 0;
+    let tail = 0;
+    const isBackdrop = (index) => {
+      const p = index * 4;
+      const r = pixels[p];
+      const g = pixels[p + 1];
+      const b = pixels[p + 2];
+      return Math.min(r, g, b) > 232 && Math.max(r, g, b) - Math.min(r, g, b) < 14;
+    };
+    const enqueue = (index) => {
+      if (index < 0 || index >= total || visited[index] || !isBackdrop(index)) return;
+      visited[index] = 1;
+      queue[tail++] = index;
+    };
+    for (let x = 0; x < surface.width; x++) {
+      enqueue(x);
+      enqueue((surface.height - 1) * surface.width + x);
+    }
+    for (let y = 0; y < surface.height; y++) {
+      enqueue(y * surface.width);
+      enqueue(y * surface.width + surface.width - 1);
+    }
+    while (head < tail) {
+      const index = queue[head++];
+      const x = index % surface.width;
+      if (x > 0) enqueue(index - 1);
+      if (x < surface.width - 1) enqueue(index + 1);
+      if (index >= surface.width) enqueue(index - surface.width);
+      if (index < total - surface.width) enqueue(index + surface.width);
+    }
+    for (let index = 0; index < total; index++) {
+      if (visited[index]) pixels[index * 4 + 3] = 0;
+    }
+    surfaceCtx.putImageData(frame, 0, 0);
+    return surface;
+  }
+
+  allySheet.addEventListener("load", () => {
+    allyPixels = allySheet;
+    renderCardPortraits();
+    renderDeckBuilder();
+  });
+  unlockableSheet.addEventListener("load", () => {
+    // The v4 atlas already has a transparent alpha channel. Reading its pixels
+    // through a canvas breaks on file:// pages, so use the image directly.
+    unlockablePixels = unlockableSheet;
+    renderCardPortraits();
+    renderDeckBuilder();
+  });
+  rockShieldSheet.addEventListener("load", () => {
+    rockShieldPixels = rockShieldSheet;
+    renderCardPortraits();
+    renderDeckBuilder();
+  });
+  enemySheet.addEventListener("load", () => {
+    enemyPixels = enemySheet;
+  });
+
+  const UNIT_TYPES = [
+    {
+      id: "moco", name: "복슬이", cost: 50, hp: 150, damage: 18,
+      speed: 53, range: 38, cooldown: 0.62, size: 54, recharge: 2.1, kind: "moco",
+      sprite: 0, cleave: 34, info: "빠르게 전선을 채우는 기본 전사",
+    },
+    {
+      id: "shield", name: "방패콩", cost: 110, hp: 520, damage: 12,
+      speed: 31, range: 42, cooldown: 0.9, size: 62, recharge: 4.8, kind: "shield",
+      sprite: 1, guard: true, info: "단단한 방패로 아군을 보호",
+    },
+    {
+      id: "archer", name: "새총이", cost: 180, hp: 180, damage: 62,
+      speed: 39, range: 225, cooldown: 1.25, size: 58, recharge: 5.8, kind: "archer",
+      sprite: 2, projectile: true, shot: "#79d55f", info: "멀리서 강한 씨앗탄을 발사",
+    },
+    {
+      id: "ram", name: "박치기뿔", cost: 300, hp: 680, damage: 98,
+      speed: 44, range: 48, cooldown: 1.3, size: 74, recharge: 8.5, kind: "ram",
+      sprite: 3, cleave: 88, info: "튼튼하고 강력한 돌격대",
+    },
+    {
+      id: "mage", name: "별빛술사", cost: 480, hp: 330, damage: 135,
+      speed: 29, range: 270, cooldown: 2.15, size: 68, recharge: 12, kind: "mage",
+      sprite: 4, projectile: true, splash: 82, slow: 2.8, shot: "#ffd658",
+      info: "별 폭발로 여러 적을 공격",
+    },
+    {
+      id: "bomber", name: "폭죽술사", cost: 390, hp: 260, damage: 88,
+      speed: 33, range: 185, cooldown: 1.85, size: 62, recharge: 10.2, kind: "bomber",
+      projectile: true, splash: 118, unlockable: true, sprite: 4, shot: "#ff8a4a",
+      tint: "hue-rotate(-40deg) saturate(1.5) brightness(1.05)", overlay: "rgba(255, 120, 64, .28)",
+      info: "넓은 폭발을 일으키는 화공 유닛",
+    },
+    {
+      id: "sniper", name: "달그림자", cost: 520, hp: 170, damage: 210,
+      speed: 26, range: 340, cooldown: 2.55, size: 56, recharge: 13.5, kind: "sniper",
+      projectile: true, critChance: 0.22, critPower: 1.9, unlockable: true, sprite: 2, shot: "#d7e7ff",
+      tint: "grayscale(.15) contrast(1.2) brightness(.92)", overlay: "rgba(210, 220, 240, .22)",
+      info: "아주 멀리서 한 발을 꽂는 저격수",
+    },
+    {
+      id: "titan", name: "바위방패", cost: 560, hp: 1280, damage: 110,
+      speed: 21, range: 52, cooldown: 1.55, size: 86, recharge: 14, kind: "titan",
+      unlockable: true, sprite: 3, cleave: 96, guard: true,
+      tint: "hue-rotate(28deg) saturate(.85) brightness(.9)", overlay: "rgba(150, 140, 120, .3)",
+      info: "느리고 단단한 최전선 거인",
+    },
+    {
+      id: "drummer", name: "진군북", cost: 330, hp: 420, damage: 22,
+      speed: 34, range: 44, cooldown: 1.1, size: 66, recharge: 8.8, kind: "drummer",
+      unlockable: true, sprite: 1, aura: 1.16,
+      tint: "hue-rotate(95deg) saturate(1.2) brightness(1.05)", overlay: "rgba(90, 210, 130, .26)",
+      info: "주변 아군의 공격력을 끌어올린다",
+    },
+    {
+      id: "scout", name: "정찰냥", cost: 70, hp: 95, damage: 14,
+      speed: 84, range: 34, cooldown: 0.48, size: 48, recharge: 1.6, kind: "scout",
+      unlockable: true, sprite: 0,
+      tint: "hue-rotate(40deg) saturate(1.1) brightness(1.15)", overlay: "rgba(255, 230, 120, .24)",
+      info: "값싸고 빠른 정찰 돌격대",
+    },
+    {
+      id: "moon_cleric", name: "달토끼 사제", cost: 410, hp: 340, damage: 42,
+      speed: 33, range: 220, cooldown: 1.65, size: 62, recharge: 9.2, kind: "healer",
+      projectile: true, heal: 145, unlockable: true, shot: "#92efd1",
+      info: "달빛 기도로 전열의 아군을 크게 회복",
+    },
+    {
+      id: "night_fox", name: "밤칼여우", cost: 310, hp: 265, damage: 112,
+      speed: 75, range: 42, cooldown: 0.68, size: 56, recharge: 7.4, kind: "assassin",
+      critChance: 0.34, critPower: 2.15, unlockable: true,
+      info: "그림자 속에서 파고드는 치명타 암살자",
+    },
+    {
+      id: "frost_owl", name: "설빛부엉", cost: 340, hp: 235, damage: 66,
+      speed: 35, range: 255, cooldown: 1.3, size: 59, recharge: 8.1, kind: "frost",
+      projectile: true, slow: 3.7, unlockable: true, shot: "#9ce7ff",
+      info: "얼음 깃털로 적 무리의 진격을 늦춘다",
+    },
+    {
+      id: "sun_lion", name: "태양갈기", cost: 500, hp: 920, damage: 72,
+      speed: 29, range: 50, cooldown: 1.02, size: 74, recharge: 11, kind: "knight",
+      unlockable: true, guard: true, cleave: 58,
+      info: "검과 방패로 버티며 전방을 넓게 베는 기사",
+    },
+    {
+      id: "raccoon_bomber", name: "화약너굴", cost: 440, hp: 285, damage: 104,
+      speed: 34, range: 195, cooldown: 1.75, size: 63, recharge: 10.8, kind: "bomber",
+      projectile: true, splash: 132, unlockable: true, shot: "#ff9b52",
+      info: "큰 폭탄으로 넓은 범위를 한꺼번에 공격",
+    },
+    {
+      id: "lynx_sniper", name: "석궁스라소니", cost: 590, hp: 185, damage: 245,
+      speed: 27, range: 365, cooldown: 2.45, size: 58, recharge: 14.2, kind: "sniper",
+      projectile: true, critChance: 0.26, critPower: 2, unlockable: true, shot: "#dcecff",
+      info: "최장 거리에서 강력한 석궁 한 발을 날린다",
+    },
+    {
+      id: "wolverine", name: "강철발톱", cost: 300, hp: 330, damage: 78,
+      speed: 63, range: 42, cooldown: 0.55, size: 61, recharge: 7.2, kind: "berserker",
+      unlockable: true, cleave: 38,
+      info: "체력이 줄수록 공격력이 폭발하는 난전 전문가",
+    },
+    {
+      id: "armadillo", name: "철갑아르마", cost: 650, hp: 1480, damage: 124,
+      speed: 20, range: 54, cooldown: 1.5, size: 84, recharge: 15.5, kind: "titan",
+      unlockable: true, cleave: 108, guard: true,
+      info: "등껍질과 대형 방패로 길목을 완전히 막는다",
+    },
+    {
+      id: "monkey_drummer", name: "전쟁북원숭", cost: 390, hp: 455, damage: 28,
+      speed: 35, range: 45, cooldown: 1.05, size: 65, recharge: 9.6, kind: "drummer",
+      unlockable: true, aura: 1.22,
+      info: "북소리로 주변 아군의 공격력을 크게 높인다",
+    },
+    {
+      id: "squirrel_scout", name: "창다람", cost: 95, hp: 120, damage: 22,
+      speed: 88, range: 38, cooldown: 0.45, size: 50, recharge: 2, kind: "scout",
+      unlockable: true,
+      info: "빠른 발과 긴 창으로 빈틈을 찌르는 정찰대",
+    },
+    {
+      id: "lightning_otter", name: "번개수달", cost: 440, hp: 310, damage: 78,
+      speed: 35, range: 235, cooldown: 1.32, size: 61, recharge: 9.8, kind: "chain",
+      projectile: true, chain: 3, chainRange: 118, unlockable: true, shot: "#59c9ff",
+      info: "번개가 가까운 적 셋에게 연쇄된다",
+    },
+    {
+      id: "gale_hawk", name: "돌풍매", cost: 390, hp: 245, damage: 96,
+      speed: 47, range: 285, cooldown: 1.55, size: 60, recharge: 9.1, kind: "knockback",
+      projectile: true, knockback: 48, unlockable: true, shot: "#d9f6a5",
+      info: "돌풍 화살로 적의 전진을 밀어낸다",
+    },
+    {
+      id: "herb_hedgehog", name: "약초고슴", cost: 420, hp: 355, damage: 52,
+      speed: 30, range: 195, cooldown: 1.7, size: 64, recharge: 10.4, kind: "poisoner",
+      projectile: true, splash: 76, poison: 5, poisonDamage: 16, unlockable: true, shot: "#b77cff",
+      info: "독 물약으로 범위 피해와 지속 피해를 준다",
+    },
+  ];
+
+  const ENEMY_TYPES = {
+    sprout: {
+      id: "sprout", name: "새싹 멧돼지", hp: 210, damage: 19, speed: 37,
+      range: 42, cooldown: 0.85, size: 56, reward: 34, kind: "sprout", sprite: 0,
+    },
+    swarm: {
+      id: "swarm", name: "잔챙이 멧돼지", hp: 95, damage: 11, speed: 58,
+      range: 34, cooldown: 0.55, size: 42, reward: 16, kind: "swarm", sprite: 0,
+      tint: "hue-rotate(88deg) saturate(1.2) brightness(1.15)",
+    },
+    fang: {
+      id: "fang", name: "붉은 송곳니", hp: 390, damage: 38, speed: 55,
+      range: 46, cooldown: 1.05, size: 64, reward: 58, kind: "fang", sprite: 1,
+    },
+    wolf: {
+      id: "wolf", name: "달빛늑대", hp: 320, damage: 46, speed: 72,
+      range: 42, cooldown: 0.78, size: 60, reward: 64, kind: "wolf", sprite: 1,
+      tint: "hue-rotate(200deg) saturate(1.15) brightness(.88)",
+    },
+    brute: {
+      id: "brute", name: "돌갑옷 대장", hp: 1080, damage: 92, speed: 25,
+      range: 58, cooldown: 1.4, size: 84, reward: 145, kind: "brute", sprite: 2, cleave: 72,
+    },
+    shell: {
+      id: "shell", name: "등껍질 두꺼비", hp: 1560, damage: 58, speed: 16,
+      range: 52, cooldown: 1.7, size: 90, reward: 160, kind: "shell", sprite: 2,
+      tint: "hue-rotate(80deg) saturate(.9) brightness(.85)",
+    },
+    spitter: {
+      id: "spitter", name: "독침 두더지", hp: 430, damage: 48, speed: 30,
+      range: 235, cooldown: 1.5, size: 61, reward: 72, kind: "spitter", sprite: 0,
+      projectile: true, slow: 1.4, shot: "#8ad84d",
+      tint: "hue-rotate(40deg) saturate(1.4) brightness(.88)",
+    },
+    toxic: {
+      id: "toxic", name: "맹독 두더지", hp: 520, damage: 68, speed: 27,
+      range: 250, cooldown: 1.35, size: 63, reward: 92, kind: "toxic", sprite: 0,
+      projectile: true, slow: 2.1, splash: 54, shot: "#c6ff4a",
+      tint: "hue-rotate(70deg) saturate(1.7) brightness(.8)",
+    },
+    shaman: {
+      id: "shaman", name: "가시 주술사", hp: 690, damage: 32, speed: 24,
+      range: 205, cooldown: 1.8, size: 70, reward: 110, kind: "shaman", sprite: 1,
+      projectile: true, heal: 105, shot: "#d483f0",
+      tint: "hue-rotate(245deg) saturate(1.2) brightness(.9)",
+    },
+    priest: {
+      id: "priest", name: "가시 사제", hp: 860, damage: 44, speed: 22,
+      range: 220, cooldown: 1.65, size: 72, reward: 138, kind: "priest", sprite: 1,
+      projectile: true, heal: 160, shot: "#f0a0ff",
+      tint: "hue-rotate(270deg) saturate(1.35) brightness(.95)",
+    },
+    jugger: {
+      id: "jugger", name: "철갑 거인", hp: 2100, damage: 128, speed: 18,
+      range: 64, cooldown: 1.55, size: 98, reward: 220, kind: "jugger", sprite: 2, cleave: 96,
+      tint: "hue-rotate(-20deg) saturate(.7) brightness(.75)",
+    },
+    wraith: {
+      id: "wraith", name: "안개여우", hp: 480, damage: 72, speed: 66,
+      range: 44, cooldown: 0.7, size: 58, reward: 96, kind: "wraith", sprite: 1,
+      critChance: 0.22, critPower: 1.8,
+      tint: "hue-rotate(250deg) saturate(.6) brightness(1.25)",
+    },
+    boss: {
+      id: "boss", name: "가시왕", hp: 3900, damage: 155, speed: 17,
+      range: 74, cooldown: 1.65, size: 112, reward: 600, kind: "boss", sprite: 3, cleave: 118, raid: true,
+    },
+    king: {
+      id: "king", name: "가시대왕", hp: 5600, damage: 188, speed: 16,
+      range: 80, cooldown: 1.5, size: 122, reward: 820, kind: "king", sprite: 3, cleave: 140, raid: true,
+      tint: "hue-rotate(-25deg) saturate(1.35) brightness(1.05)",
+    },
+    nightlord: {
+      id: "nightlord", name: "달그림자 군주", hp: 7200, damage: 210, speed: 19,
+      range: 86, cooldown: 1.42, size: 128, reward: 1100, kind: "nightlord", sprite: 3, cleave: 160, raid: true,
+      tint: "hue-rotate(210deg) saturate(1.2) brightness(.78)",
+    },
+    bloodwing_bat: {
+      id: "bloodwing_bat", name: "흡혈박쥐", hp: 175, damage: 31, speed: 92,
+      range: 36, cooldown: 0.5, size: 52, reward: 42, kind: "bat",
+      critChance: 0.2, critPower: 1.65,
+    },
+    bone_raven: {
+      id: "bone_raven", name: "뼈까마귀", hp: 455, damage: 64, speed: 34,
+      range: 270, cooldown: 1.55, size: 63, reward: 84, kind: "raven",
+      projectile: true, shot: "#d6b9ff",
+    },
+    siege_rhino: {
+      id: "siege_rhino", name: "공성코뿔소", hp: 1950, damage: 104, speed: 20,
+      range: 60, cooldown: 1.48, size: 96, reward: 195, kind: "rhino", cleave: 88, siege: 2.05,
+    },
+    mooncap_witch: {
+      id: "mooncap_witch", name: "달버섯마녀", hp: 760, damage: 45, speed: 24,
+      range: 225, cooldown: 1.72, size: 70, reward: 126, kind: "witch",
+      projectile: true, heal: 135, slow: 1.6, shot: "#a8ef55",
+    },
+  };
+
+  const CHAPTERS = {
+    1: "1장 · 초원 전선",
+    2: "2장 · 소나무 숲",
+    3: "3장 · 독안개 습지",
+    4: "4장 · 폐허 능선",
+    5: "5장 · 외성 공성",
+    6: "6장 · 달그림자 성",
+    7: "7장 · 내부 성곽",
+    8: "8장 · 가시왕 옥좌",
+  };
+
+  function S(id, name, stars, playerHp, enemyHp, money, count, pace, pool, boss, scale, waves = 3) {
+    return { id, name, stars, playerHp, enemyHp, money, count, pace, pool, boss, scale, waves };
+  }
+
+  const STAGES = [
+    S("1-1", "어둠이 내린 초원", "★☆☆", 2800, 1500, 230, 10, 2.55, [["sprout", 1]], null, 0.78),
+    S("1-2", "이슬 풀밭", "★☆☆", 2900, 1700, 220, 12, 2.4, [["sprout", 0.7], ["swarm", 0.3]], null, 0.86),
+    S("1-3", "소나무 길목", "★☆☆", 3000, 2000, 210, 14, 2.2, [["sprout", 0.62], ["fang", 0.38]], null, 0.94),
+    S("1-4", "반딧불 언덕", "★★☆", 3100, 2300, 200, 16, 2.05, [["sprout", 0.4], ["swarm", 0.25], ["fang", 0.35]], null, 1.02),
+    S("1-5", "달빛 계곡", "★★☆", 3300, 2700, 190, 16, 1.9, [["fang", 0.7], ["sprout", 0.3]], "fang", 1.1),
+    S("2-1", "안개 숲길", "★★☆", 3400, 3000, 220, 17, 2.15, [["sprout", 0.25], ["fang", 0.55], ["wolf", 0.2]], null, 1.06),
+    S("2-2", "울창한 침엽수", "★★☆", 3500, 3300, 215, 18, 2.08, [["fang", 0.45], ["wolf", 0.35], ["brute", 0.2]], null, 1.1),
+    S("2-3", "가시 능선", "★★★", 3600, 3600, 235, 18, 2.02, [["fang", 0.34], ["wolf", 0.36], ["brute", 0.3]], null, 1.15),
+    S("2-4", "폐허가 된 초소", "★★★", 3700, 3900, 230, 19, 1.94, [["wolf", 0.4], ["brute", 0.4], ["spitter", 0.2]], null, 1.22),
+    S("2-5", "외성 앞마당", "★★★", 3800, 4300, 225, 17, 1.88, [["fang", 0.35], ["brute", 0.65]], "brute", 1.3),
+    S("3-1", "밤의 습지", "★★★", 3900, 4500, 220, 20, 1.82, [["wolf", 0.35], ["spitter", 0.4], ["brute", 0.25]], null, 1.36, 4),
+    S("3-2", "독안개 초소", "★★★", 4000, 4900, 215, 21, 1.74, [["spitter", 0.5], ["fang", 0.25], ["shell", 0.25]], null, 1.42, 4),
+    S("3-3", "주술사의 늪", "★★★★", 4100, 5300, 210, 22, 1.68, [["spitter", 0.4], ["shaman", 0.35], ["shell", 0.25]], null, 1.48, 4),
+    S("3-4", "떠다니는 이끼", "★★★★", 4200, 5700, 205, 23, 1.6, [["toxic", 0.35], ["shaman", 0.35], ["wolf", 0.3]], null, 1.54, 4),
+    S("3-5", "습지 제단", "★★★★", 4300, 6200, 200, 21, 1.55, [["shaman", 0.4], ["shell", 0.35], ["toxic", 0.25]], "shaman", 1.62, 4),
+    S("4-1", "무너진 돌다리", "★★★★", 4400, 6400, 142, 25, 1.22, [["brute", 0.35], ["shell", 0.3], ["wraith", 0.35]], null, 1.78, 4),
+    S("4-2", "달그림자 숲", "★★★★", 4500, 6800, 140, 26, 1.16, [["wraith", 0.4], ["wolf", 0.3], ["spitter", 0.3]], null, 1.84, 4),
+    S("4-3", "고대 석주", "★★★★", 4600, 7200, 138, 26, 1.12, [["jugger", 0.25], ["wraith", 0.35], ["shaman", 0.4]], null, 1.9, 4),
+    S("4-4", "메아리 협곡", "★★★★", 4700, 7600, 135, 27, 1.08, [["jugger", 0.35], ["toxic", 0.35], ["wolf", 0.3]], null, 1.96, 4),
+    S("4-5", "폐허의 왕", "★★★★★", 4800, 8200, 132, 24, 1.04, [["jugger", 0.45], ["wraith", 0.3], ["priest", 0.25]], "jugger", 2.04, 4),
+    S("5-1", "공성 진지", "★★★★★", 4900, 8500, 130, 28, 1.08, [["brute", 0.3], ["spitter", 0.35], ["priest", 0.35]], null, 2.1, 4),
+    S("5-2", "외성 해자", "★★★★★", 5000, 9000, 128, 28, 1.02, [["shell", 0.35], ["toxic", 0.35], ["jugger", 0.3]], null, 2.16, 4),
+    S("5-3", "가시왕 외성", "★★★★★", 5100, 9500, 125, 30, 0.98, [["jugger", 0.4], ["priest", 0.3], ["wraith", 0.3]], null, 2.22, 4),
+    S("5-4", "성벽 아래", "★★★★★", 5200, 10000, 122, 30, 0.94, [["jugger", 0.45], ["toxic", 0.25], ["wolf", 0.3]], "brute", 2.28, 4),
+    S("5-5", "외성 성문", "★★★★★", 5400, 10800, 120, 26, 0.9, [["jugger", 0.5], ["priest", 0.5]], "boss", 2.36, 4),
+    S("6-1", "달빛 회랑", "★★★★★", 5500, 11200, 118, 30, 0.96, [["wraith", 0.45], ["priest", 0.3], ["toxic", 0.25]], null, 2.42, 4),
+    S("6-2", "유리 정원", "★★★★★", 5600, 11800, 116, 32, 0.92, [["wraith", 0.4], ["shaman", 0.3], ["jugger", 0.3]], null, 2.5, 4),
+    S("6-3", "침묵의 예배당", "★★★★★", 5700, 12400, 114, 32, 0.88, [["priest", 0.45], ["shell", 0.25], ["wraith", 0.3]], null, 2.58, 5),
+    S("6-4", "달그림자 탑", "★★★★★", 5800, 13000, 112, 33, 0.86, [["wraith", 0.35], ["toxic", 0.3], ["jugger", 0.35]], "priest", 2.66, 5),
+    S("6-5", "달의 알현실", "★★★★★", 6000, 14000, 110, 28, 0.82, [["wraith", 0.4], ["priest", 0.35], ["jugger", 0.25]], "king", 2.76, 5),
+    S("7-1", "내부 성곽", "★★★★★", 6100, 14500, 108, 34, 0.86, [["jugger", 0.4], ["wolf", 0.3], ["toxic", 0.3]], null, 2.84, 5),
+    S("7-2", "왕실 무기고", "★★★★★", 6200, 15200, 106, 34, 0.82, [["jugger", 0.45], ["priest", 0.35], ["shell", 0.2]], null, 2.92, 5),
+    S("7-3", "피의 연회장", "★★★★★", 6300, 16000, 104, 36, 0.8, [["wraith", 0.4], ["wolf", 0.3], ["jugger", 0.3]], null, 3.02, 5),
+    S("7-4", "왕좌의 복도", "★★★★★", 6400, 16800, 102, 36, 0.76, [["jugger", 0.4], ["priest", 0.35], ["wraith", 0.25]], "jugger", 3.12, 5),
+    S("7-5", "가시왕 성문", "★★★★★", 6600, 18000, 100, 30, 0.72, [["jugger", 0.4], ["priest", 0.4], ["toxic", 0.2]], "king", 3.22, 5),
+    S("8-1", "옥좌 앞뜰", "★★★★★", 6800, 18800, 98, 36, 0.78, [["wraith", 0.35], ["jugger", 0.35], ["priest", 0.3]], null, 3.32, 5),
+    S("8-2", "검은 알현실", "★★★★★", 7000, 19800, 96, 38, 0.74, [["jugger", 0.45], ["wraith", 0.35], ["priest", 0.2]], null, 3.42, 5),
+    S("8-3", "달의 심연", "★★★★★", 7200, 21000, 94, 38, 0.7, [["priest", 0.4], ["toxic", 0.25], ["wraith", 0.35]], null, 3.54, 5),
+    S("8-4", "마지막 보루", "★★★★★", 7400, 22500, 92, 40, 0.66, [["jugger", 0.4], ["priest", 0.3], ["wraith", 0.3]], "king", 3.68, 5),
+    S("8-5", "가시왕 옥좌", "★★★★★", 7800, 25000, 90, 32, 0.6, [["jugger", 0.35], ["priest", 0.35], ["wraith", 0.3]], "nightlord", 3.85, 5),
+  ];
+
+  const SAVE_KEY = "fur-front-unlock";
+  const PROFILE_KEY = "fur-front-profile-v2";
+  const LOCAL_UPDATED_KEY = "fur-front-local-updated-v1";
+  const MAX_DECK_SIZE = 10;
+  const STARTER_UNITS = UNIT_TYPES.filter((unit) => !unit.unlockable).map((unit) => unit.id);
+  const LEGACY_UNIT_MIGRATIONS = {
+    healer: "moon_cleric",
+    assassin: "night_fox",
+    frost: "frost_owl",
+    knight: "sun_lion",
+    berserker: "wolverine",
+  };
+
+  function migrateUnitIds(ids) {
+    return ids.map((id) => LEGACY_UNIT_MIGRATIONS[id] || id);
+  }
+
+  function normalizeProfile(saved = {}) {
+      const savedUnits = migrateUnitIds(Array.isArray(saved.units) ? saved.units : []);
+      const units = [...new Set([...STARTER_UNITS, ...savedUnits])]
+        .filter((id) => UNIT_TYPES.some((unit) => unit.id === id));
+      const requestedDeck = Array.isArray(saved.deck) ? migrateUnitIds(saved.deck) : units;
+      const deck = [...new Set(requestedDeck)]
+        .filter((id) => units.includes(id))
+        .slice(0, MAX_DECK_SIZE);
+      const savedLevels = saved.levels && typeof saved.levels === "object" ? saved.levels : {};
+      const levels = Object.fromEntries(units.map((id) => [
+        id,
+        Math.max(1, Math.min(10, Math.floor(Number(savedLevels[id]) || 1))),
+      ]));
+      return {
+        chests: Math.max(0, Number(saved.chests) || 0),
+        gold: saved.gold === undefined ? 300 : Math.max(0, Math.floor(Number(saved.gold) || 0)),
+        materials: saved.materials === undefined ? 8 : Math.max(0, Math.floor(Number(saved.materials) || 0)),
+        units,
+        deck: deck.length ? deck : [units[0]],
+        levels,
+        duplicates: saved.duplicates && typeof saved.duplicates === "object" ? saved.duplicates : {},
+        claimedStages: Array.isArray(saved.claimedStages) ? saved.claimedStages : [],
+      };
+  }
+
+  function loadProfile() {
+    try {
+      return normalizeProfile(JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}"));
+    } catch (_) {
+      return normalizeProfile({});
+    }
+  }
+
+  function localUpdatedAt() {
+    return Math.max(0, Number(localStorage.getItem(LOCAL_UPDATED_KEY)) || 0);
+  }
+
+  function cloudSnapshot(updatedAt = Date.now()) {
+    return {
+      profile: JSON.parse(JSON.stringify(state.profile)),
+      unlocked: state.unlocked,
+      updatedAt,
+    };
+  }
+
+  function queueCloudSave(updatedAt) {
+    window.FurCloudSave?.queueSave?.(cloudSnapshot(updatedAt));
+  }
+
+  function saveProfile() {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(state.profile));
+    const updatedAt = Date.now();
+    localStorage.setItem(LOCAL_UPDATED_KEY, String(updatedAt));
+    queueCloudSave(updatedAt);
+  }
+
+  function ownsUnit(id) {
+    return state.profile.units.includes(id);
+  }
+
+  function unitLevel(id) {
+    return Math.max(1, Math.min(10, Number(state.profile.levels[id]) || 1));
+  }
+
+  function upgradeCost(id) {
+    const level = unitLevel(id);
+    return {
+      gold: 70 + level * 55,
+      materials: 2 + Math.ceil(level * 1.5),
+    };
+  }
+
+  function availableUnits() {
+    return state.profile.deck
+      .map((id) => UNIT_TYPES.find((unit) => unit.id === id))
+      .filter(Boolean)
+      .slice(0, MAX_DECK_SIZE);
+  }
+
+  function loadUnlock() {
+    const n = Number(localStorage.getItem(SAVE_KEY) || 0);
+    return Number.isFinite(n) ? Math.max(0, Math.min(STAGES.length - 1, n)) : 0;
+  }
+
+  function saveUnlock(index) {
+    localStorage.setItem(SAVE_KEY, String(index));
+    const updatedAt = Date.now();
+    localStorage.setItem(LOCAL_UPDATED_KEY, String(updatedAt));
+    queueCloudSave(updatedAt);
+  }
+
+  function currentStage() {
+    return STAGES[state.stageIndex] || STAGES[0];
+  }
+
+  function pickFromPool(pool) {
+    const total = pool.reduce((sum, [, weight]) => sum + weight, 0);
+    let roll = Math.random() * total;
+    for (const [kind, weight] of pool) {
+      roll -= weight;
+      if (roll <= 0) return kind;
+    }
+    return pool[0][0];
+  }
+
+  function stageEnemyPool(stage) {
+    const [chapterText, partText] = stage.id.split("-");
+    const chapter = Number(chapterText) || 1;
+    const part = Number(partText) || 1;
+    const extraWeight = 0.1 + part * 0.018;
+    const reinforcements = {
+      2: [["bloodwing_bat", extraWeight]],
+      3: [["bone_raven", extraWeight]],
+      4: [["bloodwing_bat", extraWeight * 0.65], ["bone_raven", extraWeight * 0.75]],
+      5: [["siege_rhino", extraWeight]],
+      6: [["mooncap_witch", extraWeight], ["bone_raven", extraWeight * 0.55]],
+      7: [["siege_rhino", extraWeight * 0.75], ["mooncap_witch", extraWeight * 0.8]],
+      8: [["bloodwing_bat", extraWeight * 0.45], ["siege_rhino", extraWeight * 0.7], ["mooncap_witch", extraWeight]],
+    }[chapter] || [];
+    return [...stage.pool, ...reinforcements];
+  }
+
+  function buildWaveQueues(stage) {
+    const waveCount = stage.waves || 3;
+    const baseCount = Math.floor(stage.count / waveCount);
+    let remainder = stage.count % waveCount;
+    const waves = [];
+    for (let wave = 0; wave < waveCount; wave++) {
+      const count = baseCount + (remainder-- > 0 ? 1 : 0);
+      const queue = [];
+      const pool = stageEnemyPool(stage);
+      for (let i = 0; i < count; i++) queue.push(pickFromPool(pool));
+      waves.push(queue);
+    }
+    if (stage.boss) waves[waveCount - 1].push(stage.boss);
+    return waves;
+  }
+
+  const state = {
+    mode: "menu",
+    paused: false,
+    sound: true,
+    time: 0,
+    battleTime: 0,
+    money: 180,
+    maxMoney: 1200,
+    worker: 1,
+    playerHp: 3500,
+    playerMaxHp: 3500,
+    enemyHp: 3200,
+    enemyMaxHp: 3200,
+    units: [],
+    enemies: [],
+    projectiles: [],
+    particles: [],
+    texts: [],
+    cooldowns: Object.fromEntries(UNIT_TYPES.map((u) => [u.id, 0])),
+    cannon: 0,
+    cannonMax: 28,
+    command: 0,
+    commandMax: 100,
+    commandBuff: 0,
+    spawnTimer: 1.8,
+    spawnIndex: 0,
+    bossSpawned: false,
+    shake: 0,
+    flash: 0,
+    messageTimer: 0,
+    nextId: 1,
+    stageIndex: 0,
+    unlocked: 0,
+    spawnQueue: [],
+    waveQueues: [],
+    waveIndex: 1,
+    waveTotal: 3,
+    waveBreak: 0,
+    waveWaiting: false,
+    totalEnemies: 0,
+    spawnedCount: 0,
+    kills: 0,
+    combo: 0,
+    comboTimer: 0,
+    bestCombo: 0,
+    dangerLevel: 0,
+    castleHint: false,
+    profile: loadProfile(),
+  };
+
+  state.unlocked = loadUnlock();
+  state.stageIndex = state.unlocked;
+
+  let audioCtx = null;
+  function sound(type) {
+    if (!state.sound) return;
+    try {
+      audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const preset = {
+        deploy: [340, 520, 0.08, "triangle", 0.045],
+        hit: [120, 65, 0.06, "square", 0.025],
+        shoot: [620, 340, 0.09, "sine", 0.03],
+        upgrade: [420, 880, 0.22, "triangle", 0.05],
+        cannon: [90, 34, 0.5, "sawtooth", 0.08],
+        win: [440, 880, 0.6, "triangle", 0.05],
+        lose: [190, 65, 0.7, "sawtooth", 0.04],
+      }[type] || [220, 110, 0.08, "square", 0.02];
+      osc.type = preset[3];
+      osc.frequency.setValueAtTime(preset[0], now);
+      osc.frequency.exponentialRampToValueAtTime(preset[1], now + preset[2]);
+      gain.gain.setValueAtTime(preset[4], now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + preset[2]);
+      osc.start(now);
+      osc.stop(now + preset[2]);
+    } catch (_) {
+      // Audio is optional.
+    }
+  }
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+
+  function workerCost() {
+    return Math.round(130 * Math.pow(1.43, state.worker));
+  }
+
+  function incomeRate() {
+    return 18 + state.worker * 7;
+  }
+
+  function makeFighter(type, team) {
+    const dir = team === "ally" ? 1 : -1;
+    const x = team === "ally" ? BATTLE_START : BATTLE_END;
+    const uid = state.nextId++;
+    const lane = type.raid || type.kind === "boss" ? 0 : ((uid + (team === "ally" ? 0 : 1)) % 3) - 1;
+    const level = team === "ally" ? unitLevel(type.id) : 1;
+    const statPower = 1 + (level - 1) * 0.08;
+    const supportPower = 1 + (level - 1) * 0.06;
+    const maxHp = Math.round(type.hp * statPower);
+    return {
+      ...type,
+      uid,
+      level,
+      team,
+      dir,
+      x,
+      y: GROUND + lane * Math.round(18 * VIEW_SCALE),
+      lane,
+      hp: maxHp,
+      maxHp,
+      damage: Math.round(type.damage * statPower),
+      heal: type.heal ? Math.round(type.heal * supportPower) : type.heal,
+      size: Math.round(type.size * VIEW_SCALE * FIGHTER_SCALE),
+      range: type.range * VIEW_SCALE,
+      speed: type.speed * VIEW_SCALE,
+      cleave: (type.cleave || 0) * VIEW_SCALE,
+      splash: (type.splash || 0) * VIEW_SCALE,
+      attackTimer: rand(0, 0.2),
+      attackAnim: 0,
+      attackDuration: type.projectile ? 0.48 : 0.4,
+      hitFlash: 0,
+      recoil: 0,
+      slow: 0,
+      poisonTimer: 0,
+      poisonTick: 0,
+      poisonDamage: 0,
+      charge: 0,
+      moving: false,
+      spawnAnim: 0,
+      dustTimer: rand(0.05, 0.2),
+      age: 0,
+      dead: false,
+      death: 0,
+      seed: Math.random() * 10,
+    };
+  }
+
+  function deploy(index) {
+    if (state.mode !== "playing" || state.paused) return;
+    const type = UNIT_TYPES[index];
+    if (!type || !ownsUnit(type.id) || state.money < type.cost || state.cooldowns[type.id] > 0) return;
+    state.money -= type.cost;
+    state.cooldowns[type.id] = type.recharge;
+    const unit = makeFighter(type, "ally");
+    state.units.push(unit);
+    burst(BATTLE_START, unit.y - 18, "#8fdcf0", 16, 110);
+    spawnRing(BATTLE_START, unit.y - unit.size * 0.45, "#7ad9ea");
+    floating(BATTLE_START + 5, unit.y - 75, type.name, "#fff");
+    sound("deploy");
+    updateUI();
+  }
+
+  function spawnEnemy(kind) {
+    const base = ENEMY_TYPES[kind];
+    const scale = currentStage().scale;
+    const pressure = 1 + state.dangerLevel * (state.stageIndex < 10 ? 0.06 : 0.1);
+    const type = {
+      ...base,
+      hp: Math.round(base.hp * scale * pressure),
+      damage: Math.round(base.damage * (1.02 + scale * 0.28) * pressure),
+      speed: base.speed * (1 + state.dangerLevel * (state.stageIndex < 10 ? 0.025 : 0.055)),
+    };
+    const enemy = makeFighter(type, "enemy");
+    enemy.hp = type.hp;
+    enemy.maxHp = type.hp;
+    state.enemies.push(enemy);
+    burst(BATTLE_END, enemy.y - 20, "#ab7bbd", 14, 85);
+    spawnRing(BATTLE_END, enemy.y - enemy.size * 0.45, "#a568bd");
+    if (base.raid) {
+      showMessage(`⚠ ${base.name} 등장! ⚠`, 3);
+      state.shake = 1.2;
+    }
+  }
+
+  function updateSpawning(dt) {
+    if (!state.spawnQueue.length && state.waveQueues.length) {
+      if (!state.waveWaiting) {
+        state.waveWaiting = true;
+        const earlyRest = state.stageIndex < 10 ? 2.2 : (state.stageIndex < 20 ? 1 : 0);
+        state.waveBreak = Math.max(3.2, 4.2 + earlyRest - state.stageIndex * 0.045);
+        const supply = 55 + state.waveIndex * 20;
+        state.money = Math.min(state.maxMoney, state.money + supply);
+        showMessage(`다음 공세 접근 · 긴급 보급 +${supply}G`, 1.8);
+        sound("upgrade");
+      }
+      state.waveBreak -= dt;
+      if (state.waveBreak <= 0) {
+        state.waveWaiting = false;
+        state.waveIndex += 1;
+        state.spawnQueue = state.waveQueues.shift();
+        state.spawnTimer = 0.45;
+        showMessage(`WAVE ${state.waveIndex} 시작!`, 1.6);
+      }
+      return;
+    }
+    if (!state.spawnQueue.length) return;
+    state.spawnTimer -= dt;
+    if (state.spawnTimer <= 0) {
+      const kind = state.spawnQueue.shift();
+      spawnEnemy(kind);
+      state.spawnedCount += 1;
+      const rushStep = state.stageIndex < 10 ? 0.04 : 0.065;
+      const waveRush = Math.max(0.78, 1 - (state.waveIndex - 1) * rushStep);
+      state.spawnTimer = currentStage().pace * waveRush * rand(0.72, 1.04);
+    }
+  }
+
+  function upgradeWorker() {
+    if (state.mode !== "playing" || state.paused || state.worker >= 8) return;
+    const cost = workerCost();
+    if (state.money < cost) return;
+    state.money -= cost;
+    state.worker += 1;
+    state.maxMoney += 260;
+    state.money = Math.min(state.maxMoney, state.money + 30);
+    showMessage(`골드 생산소 Lv.${state.worker}`, 1.4);
+    sound("upgrade");
+    updateUI();
+  }
+
+  function fireCannon() {
+    if (state.mode !== "playing" || state.paused || state.cannon < state.cannonMax) return;
+    state.cannon = 0;
+    state.shake = 1.4;
+    state.flash = 0.35;
+    sound("cannon");
+    beamParticles();
+    let hits = 0;
+    for (const enemy of state.enemies) {
+      if (enemy.dead) continue;
+      damage(enemy, 330 + state.worker * 22, enemy.x, enemy.y - enemy.size * 0.6, true);
+      enemy.x += 65;
+      hits += 1;
+    }
+    showMessage(`성채 대포! ${hits}명 타격`, 1.4);
+  }
+
+  function fireCommand() {
+    if (state.mode !== "playing" || state.paused || state.command < state.commandMax) return;
+    state.command = 0;
+    state.commandBuff = 8;
+    state.playerHp = Math.min(state.playerMaxHp, state.playerHp + 260);
+    for (const unit of state.units) {
+      if (unit.dead) continue;
+      const heal = Math.round(unit.maxHp * 0.24);
+      unit.hp = Math.min(unit.maxHp, unit.hp + heal);
+      floating(unit.x, unit.y - unit.size, `+${heal}`, "#9df3d0", 16);
+      spawnRing(unit.x, unit.y - unit.size * 0.45, "#d78cff");
+    }
+    state.flash = 0.18;
+    burst(PLAYER_BASE_X + 50, GROUND - 100, "#d78cff", 32, 210);
+    showMessage("달빛 지휘! 8초간 진군 강화", 2);
+    sound("upgrade");
+  }
+
+  function findTarget(actor) {
+    const foes = actor.team === "ally" ? state.enemies : state.units;
+    let best = null;
+    let bestDist = Infinity;
+    for (const foe of foes) {
+      if (foe.dead) continue;
+      const horizontal = Math.abs(foe.x - actor.x) - (actor.size + foe.size) * 0.32;
+      const lanePenalty = Math.abs(foe.y - actor.y) * 0.22;
+      const d = horizontal + lanePenalty;
+      const ahead = (foe.x - actor.x) * actor.dir >= -46;
+      if (ahead && d < bestDist) {
+        bestDist = d;
+        best = foe;
+      }
+    }
+    return { target: best, distance: bestDist };
+  }
+
+  function baseDistance(actor) {
+    const baseX = actor.team === "ally" ? ENEMY_BASE_X : PLAYER_BASE_X;
+    return Math.abs(baseX - actor.x) - actor.size * 0.4 - 58;
+  }
+
+  function rollAttackDamage(actor) {
+    let amount = actor.damage;
+    if (actor.kind === "moco") {
+      const pack = state.units.filter((unit) => !unit.dead && unit.kind === "moco" && Math.abs(unit.x - actor.x) < 125).length;
+      amount *= 1 + Math.min(3, Math.max(0, pack - 1)) * 0.12;
+    }
+    if ((actor.kind === "ram" || actor.kind === "titan") && actor.charge > 75) {
+      amount *= actor.kind === "titan" ? 1.85 : 1.65;
+      actor.charge = 0;
+      floating(actor.x, actor.y - actor.size, "돌진!", "#ffd36c", 17);
+    }
+    if (actor.kind === "berserker" && actor.hp < actor.maxHp * 0.42) {
+      amount *= 1.55;
+    }
+    if (actor.team === "ally") {
+      const drum = state.units.some((unit) => !unit.dead && unit.kind === "drummer" && Math.abs(unit.x - actor.x) < 170);
+      if (drum) amount *= 1.16;
+    }
+    const critChance = actor.critChance || (actor.kind === "archer" ? 0.18 : 0);
+    if (critChance && Math.random() < critChance) {
+      amount *= actor.critPower || 1.75;
+      floating(actor.x, actor.y - actor.size, "CRIT!", "#ff8fc7", 18);
+    }
+    return Math.round(amount);
+  }
+
+  function attack(actor, target, baseHit) {
+    actor.attackTimer = actor.cooldown * (actor.team === "ally" && state.commandBuff > 0 ? 0.66 : 1);
+    actor.attackAnim = actor.attackDuration;
+    actor.moving = false;
+    const attackDamage = rollAttackDamage(actor);
+    const projectileColor = actor.shot || {
+      mage: "#ffd658", healer: "#7ce5c0", spitter: "#8ad84d", shaman: "#d483f0",
+      frost: "#8fd8ff", bomber: "#ff8a4a", sniper: "#d7e7ff", toxic: "#c6ff4a", priest: "#f0a0ff",
+    }[actor.kind] || "#79d55f";
+    if (actor.projectile) {
+      burst(
+        actor.x + actor.dir * actor.size * 0.3,
+        actor.y - actor.size * 0.72,
+        projectileColor,
+        actor.splash ? 9 : 4,
+        45
+      );
+      state.projectiles.push({
+        x: actor.x + actor.dir * actor.size * 0.35,
+        y: actor.y - actor.size * 0.72,
+        target: baseHit ? null : target,
+        baseTeam: baseHit ? (actor.team === "ally" ? "enemy" : "ally") : null,
+        targetX: baseHit ? (actor.team === "ally" ? ENEMY_BASE_X : PLAYER_BASE_X) : null,
+        targetY: baseHit ? GROUND - 82 : null,
+        team: actor.team,
+        dir: actor.dir,
+        speed: actor.kind === "sniper" ? 620 : (actor.kind === "mage" || actor.kind === "bomber" ? 340 : 480),
+        damage: attackDamage,
+        splash: actor.splash || 0,
+        slow: actor.slow || 0,
+        chain: actor.chain || 0,
+        chainRange: actor.chainRange || 0,
+        knockback: actor.knockback || 0,
+        poison: actor.poison || 0,
+        poisonDamage: actor.poisonDamage || 0,
+        siege: actor.siege || 0,
+        color: projectileColor,
+        kind: actor.kind,
+        dead: false,
+        age: 0,
+      });
+      sound("shoot");
+      return;
+    }
+
+    const hitDelay = actor.kind === "ram" || actor.kind === "titan" || actor.kind === "brute" || actor.kind === "jugger" || actor.raid ? 0.12 : 0.05;
+    slashEffect(actor);
+    actor.pendingHit = {
+      timer: hitDelay,
+      target,
+      baseHit,
+      damage: attackDamage,
+      cleave: actor.cleave || 0,
+    };
+  }
+
+  function updateFighters(dt) {
+    const all = [...state.units, ...state.enemies];
+    for (const actor of all) {
+      actor.age += dt;
+      actor.attackTimer -= dt;
+      actor.attackAnim = Math.max(0, actor.attackAnim - dt);
+      actor.hitFlash = Math.max(0, actor.hitFlash - dt);
+      actor.recoil = Math.max(0, actor.recoil - dt * 4.5);
+      actor.slow = Math.max(0, actor.slow - dt);
+      actor.spawnAnim = Math.min(1, actor.spawnAnim + dt * 4.8);
+      actor.moving = false;
+
+      if (actor.dead) {
+        actor.death += dt;
+        continue;
+      }
+
+      if (actor.poisonTimer > 0) {
+        actor.poisonTimer = Math.max(0, actor.poisonTimer - dt);
+        actor.poisonTick -= dt;
+        if (actor.poisonTick <= 0) {
+          actor.poisonTick = 1;
+          damage(actor, actor.poisonDamage, actor.x, actor.y - actor.size * 0.55, false, true);
+          if (actor.dead) continue;
+        }
+      }
+
+      if (actor.pendingHit) {
+        actor.pendingHit.timer -= dt;
+        if (actor.pendingHit.timer <= 0) {
+          const hit = actor.pendingHit;
+          if (hit.baseHit) {
+            const siegeDamage = actor.team === "enemy" ? hit.damage * (actor.siege || 1.55) : hit.damage;
+            damageBase(actor.team === "ally" ? "enemy" : "ally", siegeDamage);
+          } else if (hit.target && !hit.target.dead && Math.abs(hit.target.x - actor.x) < actor.range + 90) {
+            damage(hit.target, hit.damage, hit.target.x, hit.target.y - hit.target.size * 0.45);
+            if (hit.cleave) {
+              const foes = actor.team === "ally" ? state.enemies : state.units;
+              let cleaved = 0;
+              for (const foe of foes) {
+                if (foe === hit.target || foe.dead) continue;
+                if (Math.abs(foe.x - hit.target.x) <= hit.cleave && Math.abs(foe.y - hit.target.y) <= 46) {
+                  damage(foe, hit.damage * 0.52, foe.x, foe.y - foe.size * 0.42);
+                  cleaved += 1;
+                  if (cleaved >= 2) break;
+                }
+              }
+              if (cleaved) shockwave(hit.target.x, hit.target.y - 18, actor.dir);
+            }
+          }
+          actor.pendingHit = null;
+        }
+      }
+
+      if (actor.heal && actor.attackTimer <= 0) {
+        const friends = actor.team === "ally" ? state.units : state.enemies;
+        let patient = null;
+        let missing = 0;
+        for (const friend of friends) {
+          if (friend.dead || Math.abs(friend.x - actor.x) > actor.range) continue;
+          const lost = friend.maxHp - friend.hp;
+          if (lost > missing) {
+            patient = friend;
+            missing = lost;
+          }
+        }
+        if (patient && missing > patient.maxHp * 0.08) {
+          const amount = Math.min(missing, actor.heal);
+          patient.hp += amount;
+          actor.attackTimer = actor.cooldown * (actor.team === "ally" && state.commandBuff > 0 ? 0.66 : 1);
+          actor.attackAnim = actor.attackDuration;
+          floating(patient.x, patient.y - patient.size, `+${Math.round(amount)}`, "#91efbd", 15);
+          spawnRing(patient.x, patient.y - patient.size * 0.45, actor.team === "ally" ? "#8fe9d0" : "#c987de");
+          continue;
+        }
+      }
+
+      const { target, distance } = findTarget(actor);
+      const atBase = baseDistance(actor) <= actor.range;
+      const meleeAssist = actor.projectile ? 0 : 24;
+      const inRange = target && distance <= actor.range + meleeAssist;
+
+      if ((inRange || atBase) && actor.attackTimer <= 0) {
+        attack(actor, target, atBase && !inRange);
+      } else if (!inRange && !atBase && actor.attackAnim <= 0.08) {
+        let speedScale = 1;
+        if (actor.slow > 0) speedScale *= 0.58;
+        if (actor.team === "ally" && state.commandBuff > 0) speedScale *= 1.32;
+        const friends = actor.team === "ally" ? state.units : state.enemies;
+        for (const friend of friends) {
+          if (friend === actor || friend.dead || friend.lane !== actor.lane) continue;
+          const ahead = (friend.x - actor.x) * actor.dir;
+          const minGap = Math.max(12, (friend.size + actor.size) * 0.2);
+          if (ahead > 0 && ahead < minGap) {
+            speedScale = Math.min(speedScale, clamp(ahead / minGap, 0.2, 1));
+          }
+        }
+        actor.x += actor.dir * actor.speed * speedScale * dt;
+        actor.charge += actor.speed * speedScale * dt;
+        actor.moving = true;
+        actor.dustTimer -= dt;
+        if (actor.dustTimer <= 0) {
+          dustPuff(actor.x - actor.dir * actor.size * 0.25, actor.y + 1);
+          actor.dustTimer = rand(0.16, 0.28);
+        }
+      }
+    }
+
+    state.units = state.units.filter((u) => !u.dead || u.death < 0.7);
+    state.enemies = state.enemies.filter((u) => !u.dead || u.death < 0.7);
+  }
+
+  function updateProjectiles(dt) {
+    for (const p of state.projectiles) {
+      p.age += dt;
+      if (!p.baseTeam && (!p.target || p.target.dead)) {
+        p.dead = true;
+        continue;
+      }
+      const tx = p.baseTeam ? p.targetX : p.target.x;
+      const ty = p.baseTeam ? p.targetY : p.target.y - p.target.size * 0.45;
+      const dx = tx - p.x;
+      const dy = ty - p.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const step = p.speed * dt;
+      if (step >= d) {
+        if (p.baseTeam) {
+          damageBase(p.baseTeam, p.damage * (p.team === "enemy" ? (p.siege || 1.45) : 1));
+          burst(tx, ty, p.color, p.splash ? 18 : 7, p.splash ? 150 : 80);
+          p.dead = true;
+          continue;
+        }
+        if (p.splash) {
+          const foes = p.team === "ally" ? state.enemies : state.units;
+          for (const foe of foes) {
+            if (!foe.dead && Math.abs(foe.x - p.target.x) < p.splash) {
+              damage(foe, p.damage, foe.x, foe.y - foe.size * 0.5);
+              if (p.slow) foe.slow = Math.max(foe.slow, p.slow);
+              if (p.poison) {
+                foe.poisonTimer = Math.max(foe.poisonTimer, p.poison);
+                foe.poisonDamage = Math.max(foe.poisonDamage, p.poisonDamage);
+                foe.poisonTick = Math.min(foe.poisonTick || 0.35, 0.35);
+              }
+            }
+          }
+          burst(tx, ty, p.color, 26, 190);
+          state.shake = Math.max(state.shake, 0.22);
+        } else {
+          damage(p.target, p.damage, tx, ty);
+          if (p.slow) p.target.slow = Math.max(p.target.slow, p.slow);
+          if (p.knockback && !p.target.dead) {
+            p.target.x += (p.team === "ally" ? 1 : -1) * p.knockback;
+            floating(p.target.x, p.target.y - p.target.size, "밀려남!", "#d9f6a5", 14);
+          }
+          if (p.poison && !p.target.dead) {
+            p.target.poisonTimer = Math.max(p.target.poisonTimer, p.poison);
+            p.target.poisonDamage = Math.max(p.target.poisonDamage, p.poisonDamage);
+            p.target.poisonTick = Math.min(p.target.poisonTick || 0.35, 0.35);
+          }
+          if (p.chain && !p.target.dead) {
+            const foes = p.team === "ally" ? state.enemies : state.units;
+            const nearby = foes
+              .filter((foe) => foe !== p.target && !foe.dead && Math.abs(foe.x - p.target.x) <= p.chainRange)
+              .sort((a, b) => Math.abs(a.x - p.target.x) - Math.abs(b.x - p.target.x))
+              .slice(0, Math.max(0, p.chain - 1));
+            nearby.forEach((foe, index) => {
+              damage(foe, p.damage * (index === 0 ? 0.62 : 0.44), foe.x, foe.y - foe.size * 0.52);
+              burst(foe.x, foe.y - foe.size * 0.5, p.color, 10, 105);
+            });
+            if (nearby.length) floating(p.target.x, p.target.y - p.target.size - 18, `연쇄 ${nearby.length + 1}`, "#75ddff", 15);
+          }
+          burst(tx, ty, p.color, 7, 80);
+        }
+        p.dead = true;
+      } else {
+        p.x += dx / d * step;
+        p.y += dy / d * step;
+      }
+    }
+    state.projectiles = state.projectiles.filter((p) => !p.dead);
+  }
+
+  function damage(target, amount, x, y, heavy = false, dot = false) {
+    if (!target || target.dead) return;
+    if (target.team === "ally") {
+      const guarded = state.units.some((unit) => !unit.dead && unit.guard && Math.abs(unit.x - target.x) < 135);
+      if (guarded) amount *= 0.72;
+    }
+    amount = Math.round(amount);
+    target.hp -= amount;
+    target.hitFlash = dot ? 0.04 : 0.12;
+    target.recoil = dot ? target.recoil : (heavy ? 0.32 : 0.16);
+    if (!dot) target.x += (target.team === "ally" ? -1 : 1) * (heavy ? 22 : 1.5);
+    floating(x, y - 16, Math.round(amount), dot ? "#c58cff" : (heavy ? "#5ee7ff" : "#fff5b5"), dot ? 12 : (heavy ? 22 : 14));
+    if (dot) {
+      burst(x, y, "#9860c7", 3, 38);
+    } else if (!heavy) {
+      burst(x, y, target.team === "ally" ? "#ffe8d2" : "#b4ec8b", 6, 75);
+      impactEffect(x, y, target.team === "ally" ? -1 : 1);
+      sound("hit");
+    } else {
+      shockwave(x, y, target.team === "ally" ? -1 : 1);
+      state.shake = Math.max(state.shake, 0.28);
+    }
+    if (target.hp <= 0) {
+      target.dead = true;
+      target.death = 0;
+      target.pendingHit = null;
+      burst(target.x, target.y - target.size * 0.5, "#ffffff", 18, 160);
+      if (target.team === "enemy") {
+        state.combo = state.comboTimer > 0 ? state.combo + 1 : 1;
+        state.comboTimer = 3.6;
+        state.bestCombo = Math.max(state.bestCombo, state.combo);
+        state.kills += 1;
+        const bonus = 1 + Math.min(10, state.combo - 1) * 0.06;
+        const reward = Math.round(target.reward * bonus);
+        state.money = Math.min(state.maxMoney, state.money + reward);
+        state.command = Math.min(state.commandMax, state.command + 7 + Math.min(8, state.combo));
+        floating(target.x, target.y - target.size, `+${reward}G`, "#ffe253", 17);
+        if (state.combo >= 3) floating(target.x, target.y - target.size - 25, `${state.combo} COMBO`, "#ff9ee5", 16);
+      }
+    }
+  }
+
+  function damageBase(team, amount) {
+    if (team === "ally") {
+      state.playerHp = Math.max(0, state.playerHp - amount);
+      burst(PLAYER_BASE_X + 20, GROUND - 95, "#ffbd73", 12, 145);
+    } else {
+      state.enemyHp = Math.max(0, state.enemyHp - amount);
+      burst(ENEMY_BASE_X - 20, GROUND - 95, "#b5dbff", 12, 145);
+    }
+    state.shake = Math.max(state.shake, 0.18);
+    sound("hit");
+  }
+
+  function burst(x, y, color, count = 10, power = 100) {
+    for (let i = 0; i < count; i++) {
+      const a = rand(0, Math.PI * 2);
+      const speed = rand(power * 0.25, power);
+      state.particles.push({
+        kind: Math.random() < 0.25 ? "star" : "dot",
+        x, y,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed - power * 0.18,
+        color,
+        size: rand(3, 8),
+        life: rand(0.3, 0.75),
+        maxLife: 0.75,
+        spin: rand(-8, 8),
+        angle: rand(0, 6.28),
+      });
+    }
+  }
+
+  function spawnRing(x, y, color) {
+    state.particles.push({
+      kind: "ring", x, y, vx: 0, vy: 0, color,
+      size: 42, life: 0.42, maxLife: 0.42, spin: 0, angle: 0,
+    });
+  }
+
+  function slashEffect(actor) {
+    if (actor.projectile) return;
+    state.particles.push({
+      kind: "slash",
+      x: actor.x + actor.dir * actor.size * 0.7,
+      y: actor.y - actor.size * 0.48,
+      vx: actor.dir * 26,
+      vy: 0,
+      dir: actor.dir,
+      color: actor.team === "ally" ? "#d9f4ff" : "#ffb0b7",
+      size: actor.size * 0.9,
+      life: 0.2,
+      maxLife: 0.2,
+      spin: 0,
+      angle: 0,
+    });
+  }
+
+  function shockwave(x, y, dir) {
+    state.particles.push({
+      kind: "shock", x, y, vx: dir * 35, vy: 0, dir,
+      color: "#ffe6a1", size: 55, life: 0.28, maxLife: 0.28, spin: 0, angle: 0,
+    });
+  }
+
+  function impactEffect(x, y, dir) {
+    state.particles.push({
+      kind: "impact", x, y, vx: dir * 12, vy: 0, dir,
+      color: "#fff4bb", size: 22, life: 0.16, maxLife: 0.16, spin: 0, angle: 0,
+    });
+  }
+
+  function dustPuff(x, y) {
+    for (let i = 0; i < 3; i++) {
+      state.particles.push({
+        kind: "dust",
+        x: x + rand(-5, 5), y: y + rand(-3, 2),
+        vx: rand(-18, 18), vy: rand(-28, -10),
+        color: Math.random() < 0.5 ? "#71816a" : "#9b9872",
+        size: rand(3, 7), life: rand(0.24, 0.42), maxLife: 0.42,
+        spin: 0, angle: 0,
+      });
+    }
+  }
+
+  function beamParticles() {
+    for (let i = 0; i < 80; i++) {
+      state.particles.push({
+        kind: "beam",
+        x: rand(PLAYER_BASE_X + 50, BATTLE_END),
+        y: rand(GROUND - 155, GROUND - 5),
+        vx: rand(400, 900),
+        vy: rand(-20, 20),
+        color: Math.random() < 0.5 ? "#64ddff" : "#ffffff",
+        size: rand(8, 26),
+        life: rand(0.18, 0.45),
+        maxLife: 0.45,
+        spin: 0,
+        angle: 0,
+      });
+    }
+  }
+
+  function floating(x, y, text, color = "#fff", size = 15) {
+    state.texts.push({ x, y, text: String(text), color, size, life: 0.85, maxLife: 0.85 });
+  }
+
+  function updateEffects(dt) {
+    for (const p of state.particles) {
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.kind === "dot" || p.kind === "star" || p.kind === "dust") p.vy += 180 * dt;
+      p.angle += p.spin * dt;
+    }
+    state.particles = state.particles.filter((p) => p.life > 0);
+    for (const t of state.texts) {
+      t.life -= dt;
+      t.y -= 38 * dt;
+    }
+    state.texts = state.texts.filter((t) => t.life > 0);
+    state.shake = Math.max(0, state.shake - dt * 2.5);
+    state.flash = Math.max(0, state.flash - dt);
+    state.messageTimer -= dt;
+    if (state.messageTimer <= 0) ui.message.classList.add("hidden");
+  }
+
+  function showMessage(text, time = 1.5) {
+    ui.message.textContent = text;
+    ui.message.classList.remove("hidden");
+    state.messageTimer = time;
+  }
+
+  function checkEnd() {
+    if (state.enemyHp <= 0 && state.mode === "playing") endGame(true);
+    if (state.playerHp <= 0 && state.mode === "playing") endGame(false);
+  }
+
+  function endGame(win) {
+    state.mode = win ? "win" : "lose";
+    state.paused = false;
+    const stage = currentStage();
+    const hasNext = state.stageIndex < STAGES.length - 1;
+    if (win && hasNext) {
+      state.unlocked = Math.max(state.unlocked, state.stageIndex + 1);
+      saveUnlock(state.unlocked);
+    }
+    let chestReward = false;
+    if (win && !state.profile.claimedStages.includes(stage.id)) {
+      state.profile.claimedStages.push(stage.id);
+      state.profile.chests += 1;
+      chestReward = true;
+    }
+    let progressionReward = "";
+    if (win) {
+      const clearGold = 70 + state.stageIndex * 12;
+      const clearMaterials = chestReward ? 2 : 1;
+      state.profile.gold += clearGold;
+      state.profile.materials += clearMaterials;
+      progressionReward = `<br />보급 골드 <b>${clearGold}G</b> · 강화석 <b>${clearMaterials}개</b>`;
+      saveProfile();
+    }
+    ui.overlayTitle.textContent = win
+      ? (hasNext ? `${stage.id} 클리어!` : "전선 완전 돌파!")
+      : "성채 함락";
+    ui.overlayDesc.innerHTML = win
+      ? (hasNext
+        ? `<b>${stage.name}</b>을 지켜냈습니다.<br />${state.kills}명 처치 · 최고 ${state.bestCombo} 콤보${progressionReward}${chestReward ? "<br /><b>달빛 보급 상자 1개 획득!</b>" : ""}`
+        : `8장 끝까지 전선을 지켜냈습니다.<br /><b>${Math.floor(state.battleTime)}초</b> · 최고 ${state.bestCombo} 콤보${progressionReward}${chestReward ? "<br /><b>달빛 보급 상자 1개 획득!</b>" : ""}`)
+      : `${stage.id} ${stage.name}<br />적의 공세를 막지 못했습니다.`;
+    ui.overlayBtn.textContent = win
+      ? (hasNext ? "다음 스테이지" : "스테이지 선택")
+      : "다시 도전";
+    ui.overlayBtn.dataset.action = win
+      ? (hasNext ? "next" : "menu")
+      : "retry";
+    ui.overlayMenuBtn.classList.toggle("hidden", !win && false);
+    ui.overlay.classList.remove("hidden");
+    sound(win ? "win" : "lose");
+  }
+
+  function reset() {
+    const stage = currentStage();
+    const waves = buildWaveQueues(stage);
+    const totalEnemies = waves.reduce((sum, wave) => sum + wave.length, 0);
+    const firstWave = waves.shift();
+    Object.assign(state, {
+      mode: "playing",
+      paused: false,
+      time: 0,
+      battleTime: 0,
+      money: stage.money,
+      maxMoney: 1200,
+      worker: 1,
+      playerHp: stage.playerHp,
+      playerMaxHp: stage.playerHp,
+      enemyHp: stage.enemyHp,
+      enemyMaxHp: stage.enemyHp,
+      units: [],
+      enemies: [],
+      projectiles: [],
+      particles: [],
+      texts: [],
+      cooldowns: Object.fromEntries(UNIT_TYPES.map((u) => [u.id, 0])),
+      cannon: 0,
+      command: 0,
+      commandBuff: 0,
+      spawnTimer: 1.8,
+      spawnIndex: 0,
+      spawnQueue: firstWave,
+      waveQueues: waves,
+      waveIndex: 1,
+      waveTotal: waves.length + 1,
+      waveBreak: 0,
+      waveWaiting: false,
+      totalEnemies,
+      spawnedCount: 0,
+      kills: 0,
+      combo: 0,
+      comboTimer: 0,
+      bestCombo: 0,
+      dangerLevel: 0,
+      bossSpawned: false,
+      shake: 0,
+      flash: 0,
+      messageTimer: 0,
+      nextId: 1,
+      castleHint: false,
+    });
+    ui.overlay.classList.add("hidden");
+    ui.pauseLayer.classList.add("hidden");
+    ui.pauseBtn.textContent = "Ⅱ";
+    updateUI();
+    setTimeout(() => showMessage(`${stage.id}  ${stage.name}`, 1.6), 80);
+  }
+
+  function update(dt) {
+    state.time += dt;
+    if (state.mode !== "playing" || state.paused) {
+      updateEffects(dt);
+      return;
+    }
+    state.battleTime += dt;
+    const dangerInterval = state.stageIndex < 10 ? 60 : (state.stageIndex < 20 ? 46 : 36);
+    const nextDanger = Math.min(3, Math.floor(state.battleTime / dangerInterval));
+    if (nextDanger > state.dangerLevel) {
+      state.dangerLevel = nextDanger;
+      showMessage(`⚠ 적 공세 강화 ${"▲".repeat(state.dangerLevel)}`, 2);
+      state.shake = Math.max(state.shake, 0.45);
+    }
+    state.comboTimer = Math.max(0, state.comboTimer - dt);
+    if (state.comboTimer <= 0) state.combo = 0;
+    state.commandBuff = Math.max(0, state.commandBuff - dt);
+    state.money = Math.min(state.maxMoney, state.money + incomeRate() * dt);
+    state.cannon = Math.min(state.cannonMax, state.cannon + dt);
+    for (const key of Object.keys(state.cooldowns)) {
+      state.cooldowns[key] = Math.max(0, state.cooldowns[key] - dt);
+    }
+    updateSpawning(dt);
+    updateFighters(dt);
+    updateProjectiles(dt);
+    updateEffects(dt);
+    if (!state.spawnQueue.length && !state.waveQueues.length && !state.waveWaiting && !state.enemies.some((e) => !e.dead) && state.enemyHp > 0 && !state.castleHint) {
+      state.castleHint = true;
+      showMessage("남은 적은 없습니다. 성채를 부수세요!", 2.2);
+    }
+    checkEnd();
+    updateUI();
+  }
+
+  function updateUI() {
+    ui.playerHp.textContent = `${Math.ceil(state.playerHp)} / ${state.playerMaxHp}`;
+    ui.enemyHp.textContent = `${Math.ceil(state.enemyHp)} / ${state.enemyMaxHp}`;
+    ui.playerHpBar.style.width = `${state.playerHp / state.playerMaxHp * 100}%`;
+    ui.enemyHpBar.style.width = `${state.enemyHp / state.enemyMaxHp * 100}%`;
+    ui.money.textContent = Math.floor(state.money);
+    ui.moneyMax.textContent = state.maxMoney;
+    ui.income.textContent = `${incomeRate().toFixed(0)} G/s`;
+    const stage = currentStage();
+    ui.stageLabel.textContent = stage.id;
+    ui.stageName.textContent = stage.name;
+    const alive = state.enemies.filter((e) => !e.dead).length;
+    const laterWaves = state.waveQueues.reduce((sum, wave) => sum + wave.length, 0);
+    const remaining = state.spawnQueue.length + laterWaves + alive;
+    ui.stageProgress.textContent = `남은 적 ${remaining} / ${state.totalEnemies || stage.count}`;
+    ui.waveLabel.textContent = (state.waveWaiting
+      ? `보급 ${Math.max(0, Math.ceil(state.waveBreak))}초`
+      : `WAVE ${state.waveIndex} / ${state.waveTotal}`) + (state.dangerLevel ? ` · 위협 ${"▲".repeat(state.dangerLevel)}` : "");
+    ui.workerLevel.textContent = `Lv.${state.worker}`;
+    ui.workerCost.textContent = state.worker >= 8 ? "MAX" : `${workerCost()} G`;
+    ui.workerBtn.disabled = state.worker >= 8 || state.money < workerCost() || state.mode !== "playing";
+    const cannonPct = clamp(state.cannon / state.cannonMax * 100, 0, 100);
+    ui.cannonGauge.style.setProperty("--charge", `${cannonPct}%`);
+    ui.cannonState.textContent = cannonPct >= 100 ? "발사 가능!" : `${Math.floor(cannonPct)}%`;
+    ui.cannonBtn.classList.toggle("ready", cannonPct >= 100);
+    const commandPct = clamp(state.command / state.commandMax * 100, 0, 100);
+    ui.commandGauge.style.setProperty("--charge", `${commandPct}%`);
+    ui.commandState.textContent = state.commandBuff > 0
+      ? `${state.commandBuff.toFixed(1)}초`
+      : (commandPct >= 100 ? "발동 가능!" : `${Math.floor(commandPct)}%`);
+    ui.commandBtn.classList.toggle("ready", commandPct >= 100);
+    ui.commandBtn.disabled = commandPct < 100 || state.mode !== "playing";
+    ui.comboBadge.classList.toggle("hidden", state.combo < 2 || state.comboTimer <= 0);
+    ui.comboCount.textContent = state.combo;
+    for (const btn of ui.unitList.children) {
+      const type = UNIT_TYPES.find((unit) => unit.id === btn.dataset.unitId);
+      if (!type) continue;
+      const cd = state.cooldowns[type.id];
+      btn.disabled = state.money < type.cost || cd > 0 || state.mode !== "playing";
+      const price = btn.querySelector(".price");
+      if (price) price.textContent = `${type.cost} G`;
+      const mask = btn.querySelector(".cooldown-mask");
+      mask.style.height = `${clamp(cd / type.recharge * 100, 0, 100)}%`;
+      btn.title = `${type.name}: ${type.info}`;
+    }
+  }
+
+  function buildCards() {
+    ui.unitList.innerHTML = "";
+    const visibleUnits = availableUnits();
+    ui.unitList.style.setProperty("--unit-count", visibleUnits.length);
+    visibleUnits.forEach((type, hotkeyIndex) => {
+      const unitIndex = UNIT_TYPES.indexOf(type);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "unit-card";
+      btn.dataset.unitId = type.id;
+      const hotkey = hotkeyIndex < 9 ? String(hotkeyIndex + 1) : (hotkeyIndex === 9 ? "0" : "");
+      btn.innerHTML = `
+        ${hotkey ? `<span class="hotkey">${hotkey}</span>` : ""}
+        <span class="unit-level">Lv.${unitLevel(type.id)}</span>
+        <canvas class="portrait" data-unit-id="${type.id}" width="96" height="110" aria-hidden="true"></canvas>
+        <span class="unit-name">${type.name}</span>
+        <span class="price">${type.cost} G</span>
+        <i class="cooldown-mask"></i>`;
+      btn.addEventListener("click", () => deploy(unitIndex));
+      ui.unitList.appendChild(btn);
+    });
+    renderCardPortraits();
+  }
+
+  function unitSprite(type) {
+    const extraSprite = EXTRA_ALLY_SPRITES[type.id];
+    if (extraSprite) {
+      return extraSprite.image.complete && extraSprite.image.naturalWidth
+        ? { sheet: extraSprite.image, crop: extraSprite.crop, unique: true }
+        : null;
+    }
+    if (type.id === "titan") {
+      return rockShieldPixels
+        ? { sheet: rockShieldPixels, crop: ROCK_SHIELD_CROP, unique: true }
+        : null;
+    }
+    const unlockIndex = UNLOCKABLE_SPRITE_INDEX[type.id];
+    if (unlockIndex !== undefined) {
+      return unlockablePixels
+        ? { sheet: unlockablePixels, crop: UNLOCKABLE_CROPS[unlockIndex], unique: true }
+        : null;
+    }
+    if (!allyPixels) return null;
+    return { sheet: allyPixels, crop: ALLY_CROPS[type.sprite ?? 0], unique: false };
+  }
+
+  function drawUnitPortrait(card, type) {
+    const source = unitSprite(type);
+    if (!source) return;
+    const cardCtx = card.getContext("2d");
+    cardCtx.clearRect(0, 0, card.width, card.height);
+    cardCtx.imageSmoothingEnabled = false;
+    const [x1, y1, x2, y2] = source.crop;
+      const sourceW = x2 - x1;
+      const sourceH = y2 - y1;
+      const scale = Math.min((card.width - 16) / sourceW, (card.height - 4) / sourceH);
+      const drawW = Math.round(sourceW * scale);
+      const drawH = Math.round(sourceH * scale);
+      cardCtx.drawImage(
+        source.sheet,
+        x1, y1, sourceW, sourceH,
+        Math.round((card.width - drawW) / 2), card.height - drawH, drawW, drawH
+      );
+      if (type.overlay && !source.unique) {
+        cardCtx.globalCompositeOperation = "source-atop";
+        cardCtx.fillStyle = type.overlay;
+        cardCtx.fillRect(0, 0, card.width, card.height);
+        cardCtx.globalCompositeOperation = "source-over";
+      }
+  }
+
+  function renderCardPortraits() {
+    ui.unitList.querySelectorAll(".portrait").forEach((card) => {
+      const type = UNIT_TYPES.find((unit) => unit.id === card.dataset.unitId);
+      if (type) drawUnitPortrait(card, type);
+    });
+  }
+
+  function renderDeckBuilder() {
+    if (!ui.deckList || !state.profile) return;
+    ui.deckList.innerHTML = "";
+    const owned = UNIT_TYPES.filter((unit) => ownsUnit(unit.id));
+    owned.forEach((type) => {
+      const selectedIndex = state.profile.deck.indexOf(type.id);
+      const level = unitLevel(type.id);
+      const cost = upgradeCost(type.id);
+      const card = document.createElement("article");
+      card.className = `deck-unit${selectedIndex >= 0 ? " selected" : ""}`;
+      card.tabIndex = 0;
+      card.setAttribute("role", "button");
+      card.setAttribute("aria-label", `${type.name} 덱 ${selectedIndex >= 0 ? "해제" : "선택"}`);
+      card.innerHTML = `
+        <span class="deck-order">${selectedIndex >= 0 ? "1234567890"[selectedIndex] : "+"}</span>
+        <span class="deck-level">Lv.${level}</span>
+        <canvas class="deck-portrait" data-unit-id="${type.id}" width="128" height="110" aria-hidden="true"></canvas>
+        <strong>${type.name}</strong>
+        <small>${type.cost} G · ${type.info}</small>
+        <div class="deck-upgrade-row">
+          <span>${level >= 10 ? "최대 강화" : `능력치 +${(level - 1) * 8}%`}</span>
+          <button class="unit-upgrade-btn" type="button" ${level >= 10 ? "disabled" : ""}>
+            ${level >= 10 ? "MAX" : `${cost.gold}G · ◆${cost.materials}`}
+          </button>
+        </div>`;
+      card.addEventListener("click", (event) => {
+        if (!event.target.closest(".unit-upgrade-btn")) toggleDeckUnit(type.id);
+      });
+      card.addEventListener("keydown", (event) => {
+        if ((event.key === "Enter" || event.key === " ") && !event.target.closest(".unit-upgrade-btn")) {
+          event.preventDefault();
+          toggleDeckUnit(type.id);
+        }
+      });
+      card.querySelector(".unit-upgrade-btn").addEventListener("click", (event) => {
+        event.stopPropagation();
+        upgradeUnit(type.id);
+      });
+      ui.deckList.appendChild(card);
+      drawUnitPortrait(card.querySelector("canvas"), type);
+    });
+    const countText = `${state.profile.deck.length} / ${MAX_DECK_SIZE}`;
+    ui.deckCount.textContent = countText;
+    ui.deckSummary.textContent = countText;
+    ui.profileGold.textContent = state.profile.gold;
+    ui.materialCount.textContent = state.profile.materials;
+  }
+
+  function upgradeUnit(id) {
+    if (!ownsUnit(id)) return;
+    const level = unitLevel(id);
+    if (level >= 10) return;
+    const cost = upgradeCost(id);
+    if (state.profile.gold < cost.gold || state.profile.materials < cost.materials) {
+      ui.deckCount.textContent = state.profile.gold < cost.gold ? "보급 G 부족" : "강화석 부족";
+      return;
+    }
+    state.profile.gold -= cost.gold;
+    state.profile.materials -= cost.materials;
+    state.profile.levels[id] = level + 1;
+    saveProfile();
+    renderDeckBuilder();
+    updateCollectionUI();
+    sound("upgrade");
+  }
+
+  function toggleDeckUnit(id) {
+    const index = state.profile.deck.indexOf(id);
+    if (index >= 0) {
+      if (state.profile.deck.length <= 1) return;
+      state.profile.deck.splice(index, 1);
+    } else {
+      if (!ownsUnit(id) || state.profile.deck.length >= MAX_DECK_SIZE) {
+        ui.deckCount.textContent = "10 / 10 MAX";
+        return;
+      }
+      state.profile.deck.push(id);
+    }
+    saveProfile();
+    buildCards();
+    renderDeckBuilder();
+  }
+
+  function togglePause() {
+    if (state.mode !== "playing") return;
+    state.paused = !state.paused;
+    ui.pauseLayer.classList.toggle("hidden", !state.paused);
+    ui.pauseBtn.textContent = state.paused ? "▶" : "Ⅱ";
+  }
+
+  function startGame() {
+    ui.howPanel.classList.add("hidden");
+    ui.chestPanel.classList.add("hidden");
+    ui.deckPanel.classList.add("hidden");
+    ui.titleScreen.classList.add("hidden");
+    requestAnimationFrame(() => {
+      layoutBattle();
+      reset();
+      sound("deploy");
+    });
+  }
+
+  function goToMenu() {
+    state.mode = "menu";
+    state.paused = false;
+    ui.overlay.classList.add("hidden");
+    ui.pauseLayer.classList.add("hidden");
+    ui.titleScreen.classList.remove("hidden");
+    renderStageList();
+    updateCollectionUI();
+    buildCards();
+    renderDeckBuilder();
+  }
+
+  function updateCollectionUI() {
+    const locked = UNIT_TYPES.filter((unit) => unit.unlockable && !ownsUnit(unit.id));
+    ui.chestCount.textContent = state.profile.chests;
+    ui.collectionCount.textContent = `${state.profile.units.length} / ${UNIT_TYPES.length} 보유`;
+    ui.deckSummary.textContent = `${state.profile.deck.length} / ${MAX_DECK_SIZE}`;
+    ui.profileGold.textContent = state.profile.gold;
+    ui.materialCount.textContent = state.profile.materials;
+    ui.chestOpenBtn.disabled = state.profile.chests <= 0;
+    ui.chestOpenBtn.textContent = state.profile.chests > 0 ? "상자 열기" : "상자 없음";
+    ui.chestDesc.innerHTML = state.profile.chests <= 0
+      ? "스테이지 최초 클리어로 상자를 획득합니다.<br />캐릭터 외에도 강화석·보급 골드·훈련서가 등장합니다."
+      : `상자 ${state.profile.chests}개 · 미보유 대원 ${locked.length}명<br />캐릭터 중복 시 <b>강화석 6개 + 보급 골드 120G</b>로 자동 전환됩니다.`;
+  }
+
+  function openChest() {
+    if (state.profile.chests <= 0) return;
+    state.profile.chests -= 1;
+    const roll = Math.random();
+    let resultText = "";
+    let rewardColor = "#d58cff";
+
+    if (roll < 0.45) {
+      const pool = UNIT_TYPES.filter((unit) => unit.unlockable);
+      const unit = pool[Math.floor(Math.random() * pool.length)];
+      rewardColor = unit.shot || unit.overlay || "#d58cff";
+      if (ownsUnit(unit.id)) {
+        state.profile.duplicates[unit.id] = (Number(state.profile.duplicates[unit.id]) || 0) + 1;
+        state.profile.materials += 6;
+        state.profile.gold += 120;
+        resultText = `<b>${unit.name} 중복!</b><br />강화석 6개와 보급 골드 120G로 전환했습니다.`;
+      } else {
+        state.profile.units.push(unit.id);
+        state.profile.levels[unit.id] = 1;
+        if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(unit.id);
+        resultText = `<b>${unit.name}</b> 신규 영입!<br />${unit.info}`;
+      }
+    } else if (roll < 0.75) {
+      const amount = 4 + Math.floor(Math.random() * 5);
+      state.profile.materials += amount;
+      rewardColor = "#8fe9d2";
+      resultText = `<b>강화석 ${amount}개</b> 획득!<br />덱 편성 화면에서 대원을 강화할 수 있습니다.`;
+    } else if (roll < 0.95) {
+      const amount = 150 + Math.floor(Math.random() * 151);
+      state.profile.gold += amount;
+      rewardColor = "#f3c45d";
+      resultText = `<b>보급 골드 ${amount}G</b> 획득!<br />대원 강화 비용으로 사용할 수 있습니다.`;
+    } else {
+      const candidates = state.profile.units.filter((id) => unitLevel(id) < 10);
+      if (candidates.length) {
+        const id = candidates[Math.floor(Math.random() * candidates.length)];
+        const unit = UNIT_TYPES.find((entry) => entry.id === id);
+        state.profile.levels[id] = unitLevel(id) + 1;
+        rewardColor = "#fff099";
+        resultText = `<b>특급 훈련서!</b><br />${unit.name}이 비용 없이 Lv.${state.profile.levels[id]}로 강화됐습니다.`;
+      } else {
+        state.profile.materials += 10;
+        rewardColor = "#fff099";
+        resultText = "<b>특급 훈련서 중복!</b><br />모든 대원이 최대 레벨이라 강화석 10개로 전환했습니다.";
+      }
+    }
+    saveProfile();
+    burst(W * 0.5, H * 0.5, rewardColor, 42, 260);
+    sound("win");
+    buildCards();
+    renderDeckBuilder();
+    updateCollectionUI();
+    ui.chestDesc.innerHTML = resultText;
+  }
+
+  function handleOverlayAction() {
+    const action = ui.overlayBtn.dataset.action || "retry";
+    if (action === "next") {
+      state.stageIndex += 1;
+      startGame();
+    } else if (action === "menu") {
+      goToMenu();
+    } else {
+      reset();
+    }
+  }
+
+  function renderStageList() {
+    ui.stageList.innerHTML = "";
+    let lastChapter = "";
+    STAGES.forEach((stage, index) => {
+      const chapter = stage.id.split("-")[0];
+      if (chapter !== lastChapter) {
+        const label = document.createElement("div");
+        label.className = "stage-chapter";
+        label.textContent = CHAPTERS[chapter] || `${chapter}장`;
+        ui.stageList.appendChild(label);
+        lastChapter = chapter;
+      }
+      const locked = index > state.unlocked;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "stage-pick";
+      if (index === state.stageIndex) btn.classList.add("selected");
+      if (index < state.unlocked) btn.classList.add("cleared");
+      btn.disabled = locked;
+      btn.innerHTML = `
+        <span class="code">${stage.id}</span>
+        <span><strong>${locked ? "잠김" : stage.name}</strong><small>${locked ? "이전 스테이지 클리어 필요" : stage.stars}</small></span>
+        <span class="mark">${index === state.stageIndex ? "▶" : (index < state.unlocked ? "OK" : "LOCK")}</span>`;
+      btn.addEventListener("click", () => {
+        if (locked) return;
+        state.stageIndex = index;
+        renderStageList();
+      });
+      ui.stageList.appendChild(btn);
+    });
+  }
+
+  ui.gameStartBtn.addEventListener("click", startGame);
+  ui.howBtn.addEventListener("click", () => {
+    ui.chestPanel.classList.add("hidden");
+    ui.deckPanel.classList.add("hidden");
+    ui.howPanel.classList.remove("hidden");
+  });
+  ui.howCloseBtn.addEventListener("click", () => ui.howPanel.classList.add("hidden"));
+  ui.deckBtn.addEventListener("click", () => {
+    ui.howPanel.classList.add("hidden");
+    ui.chestPanel.classList.add("hidden");
+    renderDeckBuilder();
+    ui.deckPanel.classList.remove("hidden");
+  });
+  ui.deckCloseBtn.addEventListener("click", () => ui.deckPanel.classList.add("hidden"));
+  ui.deckDoneBtn.addEventListener("click", () => ui.deckPanel.classList.add("hidden"));
+  ui.chestBtn.addEventListener("click", () => {
+    ui.howPanel.classList.add("hidden");
+    ui.deckPanel.classList.add("hidden");
+    ui.chestPanel.classList.remove("hidden");
+    updateCollectionUI();
+  });
+  ui.chestCloseBtn.addEventListener("click", () => ui.chestPanel.classList.add("hidden"));
+  ui.chestOpenBtn.addEventListener("click", openChest);
+  ui.overlayBtn.addEventListener("click", handleOverlayAction);
+  ui.overlayMenuBtn.addEventListener("click", goToMenu);
+  ui.workerBtn.addEventListener("click", upgradeWorker);
+  ui.cannonBtn.addEventListener("click", fireCannon);
+  ui.commandBtn.addEventListener("click", fireCommand);
+  ui.homeBtn.addEventListener("click", goToMenu);
+  ui.pauseBtn.addEventListener("click", togglePause);
+  ui.soundBtn.addEventListener("click", () => {
+    state.sound = !state.sound;
+    ui.soundBtn.textContent = state.sound ? "SFX" : "OFF";
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.repeat) return;
+    if (state.mode === "menu") {
+      if (e.key === "Enter") startGame();
+      if (e.key === "Escape") {
+        ui.howPanel.classList.add("hidden");
+        ui.chestPanel.classList.add("hidden");
+        ui.deckPanel.classList.add("hidden");
+      }
+      return;
+    }
+    const slot = "1234567890".indexOf(e.key);
+    if (slot >= 0) {
+      const type = availableUnits()[slot];
+      if (type) deploy(UNIT_TYPES.indexOf(type));
+    }
+    if (e.key.toLowerCase() === "w") upgradeWorker();
+    if (e.key.toLowerCase() === "q") fireCommand();
+    if (e.key.toLowerCase() === "h") {
+      goToMenu();
+      return;
+    }
+    if (e.code === "Space") {
+      e.preventDefault();
+      fireCannon();
+    }
+    if (e.key.toLowerCase() === "p" || e.key === "Escape") togglePause();
+  });
+
+  function roundedRect(x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, rr);
+  }
+
+  function ellipse(x, y, rx, ry, color, stroke = "#272638", line = 4) {
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = line;
+      ctx.stroke();
+    }
+  }
+
+  function circle(x, y, r, color, stroke = "#272638", line = 4) {
+    ellipse(x, y, r, r, color, stroke, line);
+  }
+
+  function line(x1, y1, x2, y2, color = "#272638", width = 5) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.stroke();
+  }
+
+  const STAGE_PALETTES = [
+    ["rgba(35, 58, 92, .08)", "firefly"], ["rgba(30, 72, 78, .15)", "mist"],
+    ["rgba(47, 77, 48, .2)", "toxic"], ["rgba(42, 48, 92, .18)", "rain"],
+    ["rgba(103, 52, 36, .2)", "ember"], ["rgba(78, 94, 123, .17)", "snow"],
+    ["rgba(42, 34, 66, .24)", "storm"], ["rgba(74, 25, 45, .28)", "eclipse"],
+  ];
+  const STAGE_VARIANTS = [
+    { filter: "brightness(.84) saturate(.9)", veil: "rgba(8, 18, 38, .12)" },
+    { filter: "brightness(.93) saturate(1.02)", veil: "rgba(87, 126, 158, .035)" },
+    { filter: "brightness(1.01) saturate(1.08)", veil: "rgba(116, 96, 152, .035)" },
+    { filter: "brightness(.9) contrast(1.08) saturate(1.12)", veil: "rgba(22, 38, 64, .08)" },
+    { filter: "brightness(.78) contrast(1.16) saturate(1.2)", veil: "rgba(80, 20, 35, .1)" },
+  ];
+
+  function drawStageAtmosphere() {
+    const [chapterText, partText] = currentStage().id.split("-");
+    const chapter = clamp(Number(chapterText) || 1, 1, STAGE_PALETTES.length);
+    const part = clamp(Number(partText) || 1, 1, 5);
+    const [tint, weather] = STAGE_PALETTES[chapter - 1];
+    ctx.save();
+    ctx.globalCompositeOperation = "multiply";
+    ctx.fillStyle = tint;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "source-over";
+
+    if (weather === "mist" || weather === "toxic") {
+      ctx.fillStyle = weather === "toxic" ? `rgba(145, 198, 76, ${0.045 + part * 0.012})` : `rgba(170, 202, 209, ${0.04 + part * 0.01})`;
+      for (let i = 0; i < 7; i++) {
+        const x = ((i * 250 + state.time * (8 + part)) % (W + 320)) - 160;
+        const y = GROUND - 80 - (i % 3) * 48;
+        ctx.fillRect(Math.round(x), y, 230 + part * 16, 8 + (i % 2) * 5);
+      }
+    } else if (weather === "rain" || weather === "storm") {
+      ctx.strokeStyle = weather === "storm" ? "rgba(197, 178, 255, .26)" : "rgba(163, 207, 237, .2)";
+      ctx.lineWidth = 2;
+      const drops = 32 + part * 9;
+      for (let i = 0; i < drops; i++) {
+        const x = (i * 83 + state.time * (180 + part * 18)) % (W + 80) - 40;
+        const y = (i * 47 + state.time * 260) % Math.max(1, GROUND - 70);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - 9 - part, y + 22 + part * 2);
+        ctx.stroke();
+      }
+      if (weather === "storm" && Math.floor(state.time * 0.42 + part) % 11 === 0) {
+        ctx.fillStyle = "rgba(185, 183, 255, .055)";
+        ctx.fillRect(0, 0, W, GROUND);
+      }
+    } else if (weather === "snow") {
+      ctx.fillStyle = "rgba(225, 241, 255, .55)";
+      for (let i = 0; i < 26 + part * 5; i++) {
+        const x = (i * 101 + state.time * (15 + i % 5)) % W;
+        const y = (i * 59 + state.time * (28 + i % 7)) % Math.max(1, GROUND - 60);
+        const size = 2 + (i + part) % 4;
+        ctx.fillRect(Math.round(x), Math.round(y), size, size);
+      }
+    } else if (weather === "ember" || weather === "eclipse") {
+      ctx.fillStyle = weather === "eclipse" ? "rgba(255, 77, 98, .6)" : "rgba(255, 151, 68, .66)";
+      for (let i = 0; i < 18 + part * 5; i++) {
+        const x = (i * 137 + state.time * (10 + i % 4)) % W;
+        const y = GROUND - ((i * 73 + state.time * (35 + i % 6)) % Math.max(1, GROUND - 100));
+        ctx.fillRect(Math.round(x), Math.round(y), 3 + i % 3, 3 + i % 3);
+      }
+    } else {
+      ctx.fillStyle = `rgba(245, 222, 109, ${0.18 + part * 0.025})`;
+      for (let i = 0; i < 8 + part * 2; i++) {
+        const x = (i * 173 + state.time * (4 + i % 3)) % W;
+        const y = GROUND - 120 - (i * 41 % 210);
+        ctx.fillRect(Math.round(x), Math.round(y), 3, 3);
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawBackground() {
+    ctx.fillStyle = "#0b1220";
+    ctx.fillRect(0, 0, W, H);
+    const [chapterText, partText] = currentStage().id.split("-");
+    const chapter = clamp(Number(chapterText) || 1, 1, stageBackgrounds.length);
+    const part = clamp(Number(partText) || 1, 1, 5);
+    const scene = stageBackgrounds[chapter - 1] || bg;
+    const variant = STAGE_VARIANTS[part - 1];
+    if (scene.complete && scene.naturalWidth) {
+      const zoom = 1 + (part - 1) * 0.012;
+      const scale = Math.max(W / scene.naturalWidth, H / scene.naturalHeight) * zoom;
+      const dw = scene.naturalWidth * scale;
+      const dh = scene.naturalHeight * scale;
+      const shiftX = (part - 3) * W * 0.009;
+      ctx.imageSmoothingEnabled = false;
+      ctx.save();
+      ctx.filter = variant.filter;
+      ctx.drawImage(scene, Math.round((W - dw) / 2 + shiftX), Math.round(H - dh), Math.round(dw), Math.round(dh));
+      ctx.restore();
+      ctx.fillStyle = variant.veil;
+      ctx.fillRect(0, 0, W, H);
+    }
+    drawStageAtmosphere();
+  }
+
+  function drawBase(team) {
+    const ally = team === "ally";
+    const x = ally ? PLAYER_BASE_X : ENEMY_BASE_X;
+    const hp = ally ? state.playerHp : state.enemyHp;
+    const bob = hp <= 0 ? 6 : Math.sin(state.time * 1.8 + (ally ? 0 : 2)) * 1.4;
+    ctx.save();
+    ctx.translate(x, GROUND + bob);
+    if (!ally) ctx.scale(-1, 1);
+
+    ctx.globalAlpha = hp <= 0 ? 0.65 : 1;
+    ctx.fillStyle = "rgba(20,30,20,.24)";
+    ctx.beginPath();
+    ctx.ellipse(0, 15, 78, 17, 0, 0, 6.28);
+    ctx.fill();
+
+    // Rock foundation
+    roundedRect(-65, -38, 125, 49, 12);
+    ctx.fillStyle = ally ? "#a9b7c4" : "#6b6573";
+    ctx.fill();
+    ctx.strokeStyle = "#292738";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    line(-40, -13, -25, -34, "#7a8997", 3);
+    line(20, -12, 35, -35, "#7a8997", 3);
+
+    // Main tower
+    roundedRect(-48, -135, 92, 102, 15);
+    ctx.fillStyle = ally ? "#f6e8c0" : "#63566d";
+    ctx.fill();
+    ctx.strokeStyle = "#292738";
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
+    // Roof / horns
+    ctx.beginPath();
+    if (ally) {
+      ctx.moveTo(-58, -130);
+      ctx.quadraticCurveTo(0, -196, 56, -130);
+      ctx.lineTo(45, -111);
+      ctx.lineTo(-48, -111);
+    } else {
+      ctx.moveTo(-54, -128);
+      ctx.lineTo(-42, -182);
+      ctx.lineTo(-14, -151);
+      ctx.lineTo(12, -192);
+      ctx.lineTo(31, -150);
+      ctx.lineTo(58, -172);
+      ctx.lineTo(48, -111);
+      ctx.lineTo(-47, -111);
+    }
+    ctx.closePath();
+    ctx.fillStyle = ally ? "#f2b54b" : "#b9475e";
+    ctx.fill();
+    ctx.strokeStyle = "#292738";
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
+    // Face / door
+    circle(-16, -88, 8, ally ? "#323443" : "#f0da63", null);
+    circle(17, -88, 8, ally ? "#323443" : "#f0da63", null);
+    if (ally) {
+      ctx.beginPath();
+      ctx.arc(0, -78, 24, 0.2, Math.PI - 0.2);
+      ctx.strokeStyle = "#323443";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      circle(-34, -70, 7, "#ef9c8f", null);
+      circle(34, -70, 7, "#ef9c8f", null);
+    } else {
+      line(-22, -102, -8, -94, "#292738", 4);
+      line(22, -102, 8, -94, "#292738", 4);
+      ctx.beginPath();
+      ctx.moveTo(-18, -68);
+      ctx.lineTo(-8, -56);
+      ctx.lineTo(0, -68);
+      ctx.lineTo(9, -56);
+      ctx.lineTo(19, -70);
+      ctx.strokeStyle = "#292738";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+    }
+
+    // Cannon
+    ctx.save();
+    ctx.translate(ally ? 28 : 25, -122);
+    ctx.rotate(ally ? -0.05 : 0.02);
+    roundedRect(0, -9, 54, 18, 8);
+    ctx.fillStyle = ally ? "#5e7182" : "#3c3445";
+    ctx.fill();
+    ctx.strokeStyle = "#292738";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.restore();
+
+    // Flag
+    line(-36, -148, -36, -211, "#383747", 5);
+    ctx.beginPath();
+    ctx.moveTo(-34, -207);
+    ctx.quadraticCurveTo(10, -197, 31, -208);
+    ctx.lineTo(27, -170);
+    ctx.quadraticCurveTo(0, -162, -34, -177);
+    ctx.closePath();
+    ctx.fillStyle = ally ? "#63cdeb" : "#d85463";
+    ctx.fill();
+    ctx.strokeStyle = "#292738";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 20px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(ally ? "✦" : "♛", -2, -180);
+
+    ctx.restore();
+  }
+
+  function drawHealth(actor) {
+    if (actor.hp >= actor.maxHp || actor.dead) return;
+    const w = actor.size * 1.05;
+    const y = -actor.size - 17;
+    roundedRect(-w / 2, y, w, 8, 4);
+    ctx.fillStyle = "#343441";
+    ctx.fill();
+    roundedRect(-w / 2 + 1, y + 1, Math.max(0, (w - 2) * actor.hp / actor.maxHp), 6, 3);
+    ctx.fillStyle = actor.team === "ally" ? "#52d67c" : "#f06064";
+    ctx.fill();
+  }
+
+  function drawFighter(actor) {
+    const walk = Math.sin(actor.age * actor.speed * 0.13 + actor.seed);
+    const attack = actor.attackAnim > 0 ? Math.sin(actor.attackAnim / 0.34 * Math.PI) : 0;
+    const deathT = clamp(actor.death / 0.7, 0, 1);
+    const squash = actor.dead ? 1 - deathT * 0.75 : 1 + Math.abs(walk) * 0.025;
+    const leap = actor.dead ? 0 : Math.abs(walk) * 3 + attack * 4;
+    const lunge = attack * 10 * actor.dir;
+
+    ctx.save();
+    ctx.translate(actor.x + lunge, actor.y - leap);
+    if (actor.dir < 0) ctx.scale(-1, 1);
+    ctx.scale(1 + (1 - squash) * 0.35, squash);
+    ctx.globalAlpha = actor.dead ? 1 - deathT : 1;
+    if (actor.hitFlash > 0) {
+      ctx.shadowColor = "#fff";
+      ctx.shadowBlur = 22;
+    }
+
+    ctx.fillStyle = "rgba(20,30,25,.22)";
+    ctx.beginPath();
+    ctx.ellipse(-lunge, 8 + leap, actor.size * 0.52, actor.size * 0.15, 0, 0, 6.28);
+    ctx.fill();
+
+    if (actor.team === "ally") drawAlly(actor, walk, attack);
+    else drawEnemy(actor, walk, attack);
+    drawHealth(actor);
+    ctx.restore();
+  }
+
+  function drawAlly(a, walk, attack) {
+    const s = a.size;
+    if (a.kind === "moco") {
+      // Tail and ears
+      ctx.beginPath();
+      ctx.moveTo(-s * .42, -s * .52);
+      ctx.quadraticCurveTo(-s * .65, -s * .76, -s * .55, -s * .95);
+      ctx.quadraticCurveTo(-s * .35, -s * .84, -s * .24, -s * .64);
+      ctx.fillStyle = "#f6a95d";
+      ctx.fill();
+      ctx.strokeStyle = "#292738"; ctx.lineWidth = 4; ctx.stroke();
+      circle(0, -s * .48, s * .42, "#fff6dc", "#292738", 5);
+      ctx.beginPath();
+      ctx.moveTo(-s * .27, -s * .75); ctx.lineTo(-s * .1, -s * 1.02); ctx.lineTo(s * .02, -s * .72);
+      ctx.moveTo(s * .12, -s * .72); ctx.lineTo(s * .32, -s * .98); ctx.lineTo(s * .36, -s * .64);
+      ctx.fillStyle = "#fff6dc"; ctx.fill(); ctx.stroke();
+      circle(-s * .13, -s * .5, 3.5, "#292738", null);
+      circle(s * .15, -s * .5, 3.5, "#292738", null);
+      ctx.beginPath(); ctx.moveTo(2, -s * .41); ctx.lineTo(7, -s * .36); ctx.lineTo(-3, -s * .36); ctx.closePath();
+      ctx.fillStyle = "#ec7f75"; ctx.fill();
+      line(-s * .2, -s * .14, -s * .24 + walk * 3, 2, "#292738", 5);
+      line(s * .16, -s * .14, s * .2 - walk * 3, 2, "#292738", 5);
+    } else if (a.kind === "shield") {
+      circle(-5, -s * .48, s * .39, "#d8eff1", "#292738", 5);
+      ctx.beginPath();
+      ctx.moveTo(-s * .28, -s * .73); ctx.lineTo(-s * .1, -s * .98); ctx.lineTo(0, -s * .72);
+      ctx.moveTo(s * .06, -s * .72); ctx.lineTo(s * .24, -s * .96); ctx.lineTo(s * .3, -s * .63);
+      ctx.fillStyle = "#d8eff1"; ctx.fill(); ctx.stroke();
+      circle(-s * .13, -s * .5, 3.5, "#292738", null);
+      circle(s * .1, -s * .5, 3.5, "#292738", null);
+      ctx.save();
+      ctx.translate(s * .28 + attack * 8, -s * .35);
+      ctx.beginPath(); ctx.moveTo(0, -s * .42); ctx.lineTo(s * .38, -s * .28); ctx.lineTo(s * .33, s * .25);
+      ctx.quadraticCurveTo(0, s * .52, -s * .18, s * .16); ctx.lineTo(-s * .18, -s * .27); ctx.closePath();
+      ctx.fillStyle = "#68b9d5"; ctx.fill(); ctx.strokeStyle = "#292738"; ctx.lineWidth = 5; ctx.stroke();
+      ctx.fillStyle = "#fff6c4"; ctx.font = `bold ${s * .42}px sans-serif`; ctx.textAlign = "center"; ctx.fillText("✦", s * .08, s * .04);
+      ctx.restore();
+    } else if (a.kind === "archer") {
+      circle(-8, -s * .48, s * .38, "#fff0c9", "#292738", 5);
+      ctx.beginPath();
+      ctx.moveTo(-s * .3, -s * .72); ctx.lineTo(-s * .14, -s * 1.02); ctx.lineTo(0, -s * .7);
+      ctx.moveTo(s * .04, -s * .7); ctx.lineTo(s * .22, -s * .96); ctx.lineTo(s * .29, -s * .61);
+      ctx.fillStyle = "#fff0c9"; ctx.fill(); ctx.stroke();
+      circle(-s * .16, -s * .5, 3.3, "#292738", null);
+      circle(s * .08, -s * .5, 3.3, "#292738", null);
+      ctx.beginPath(); ctx.arc(s * .17, -s * .38, s * .43, -1.2, 1.15);
+      ctx.strokeStyle = "#8d5d3c"; ctx.lineWidth = 5; ctx.stroke();
+      line(s * .32, -s * .78, s * .32, -s * .04, "#efe6cc", 2);
+      line(s * .02, -s * .4, s * .52 + attack * 10, -s * .4, "#292738", 3);
+      ctx.beginPath(); ctx.moveTo(s * .56 + attack * 10, -s * .4); ctx.lineTo(s * .43 + attack * 10, -s * .48); ctx.lineTo(s * .43 + attack * 10, -s * .32); ctx.closePath();
+      ctx.fillStyle = "#65b95d"; ctx.fill();
+    } else if (a.kind === "ram") {
+      ellipse(0, -s * .42, s * .48, s * .4, "#ddd5c0", "#292738", 6);
+      // Curled horns
+      circle(-s * .28, -s * .68, s * .24, "#d79545", "#292738", 5);
+      circle(s * .28, -s * .68, s * .24, "#d79545", "#292738", 5);
+      circle(-s * .28, -s * .68, s * .1, "#fff0c9", "#292738", 4);
+      circle(s * .28, -s * .68, s * .1, "#fff0c9", "#292738", 4);
+      ellipse(0, -s * .48, s * .26, s * .3, "#fff1cf", "#292738", 4);
+      line(-s * .14, -s * .54, -s * .06, -s * .51, "#292738", 5);
+      line(s * .14, -s * .54, s * .06, -s * .51, "#292738", 5);
+      circle(0, -s * .39, 5, "#8a5b55", null);
+      line(-s * .22, -s * .08, -s * .26 + walk * 4, 2, "#292738", 6);
+      line(s * .22, -s * .08, s * .27 - walk * 4, 2, "#292738", 6);
+    } else {
+      // Star mage
+      ellipse(0, -s * .4, s * .37, s * .35, "#e9e1ff", "#292738", 5);
+      ctx.beginPath();
+      ctx.moveTo(-s * .4, -s * .6); ctx.quadraticCurveTo(-s * .15, -s * 1.15, s * .33, -s * .76);
+      ctx.lineTo(s * .18, -s * .58); ctx.closePath();
+      ctx.fillStyle = "#735db7"; ctx.fill(); ctx.strokeStyle = "#292738"; ctx.lineWidth = 5; ctx.stroke();
+      ctx.fillStyle = "#ffe566"; ctx.font = `bold ${s * .3}px sans-serif`; ctx.textAlign = "center"; ctx.fillText("★", -s * .05, -s * .8);
+      circle(-s * .13, -s * .43, 3.5, "#292738", null);
+      circle(s * .13, -s * .43, 3.5, "#292738", null);
+      line(s * .25, -s * .55, s * .55, -s * .9, "#6e4936", 5);
+      ctx.save(); ctx.translate(s * .58, -s * .94); ctx.rotate(state.time * 1.2);
+      ctx.fillStyle = "#ffd84e"; ctx.font = `bold ${s * .38}px sans-serif`; ctx.fillText("✦", 0, 0); ctx.restore();
+    }
+  }
+
+  function drawEnemy(a, walk, attack) {
+    const s = a.size;
+    if (a.kind === "sprout") {
+      ellipse(0, -s * .42, s * .46, s * .36, "#83c96c", "#312a38", 5);
+      ctx.beginPath(); ctx.moveTo(-3, -s * .76); ctx.quadraticCurveTo(-s * .34, -s * 1.08, -s * .46, -s * .77);
+      ctx.quadraticCurveTo(-s * .22, -s * .65, -2, -s * .76);
+      ctx.fillStyle = "#4caa51"; ctx.fill(); ctx.strokeStyle = "#312a38"; ctx.lineWidth = 4; ctx.stroke();
+      circle(-s * .17, -s * .49, 4, "#312a38", null);
+      circle(s * .14, -s * .49, 4, "#312a38", null);
+      ellipse(s * .34, -s * .34, s * .18, s * .14, "#b9df85", "#312a38", 4);
+      circle(s * .39, -s * .36, 2.5, "#312a38", null);
+      line(-s * .22, -s * .1, -s * .26 + walk * 3, 1, "#312a38", 5);
+      line(s * .18, -s * .09, s * .22 - walk * 3, 1, "#312a38", 5);
+    } else if (a.kind === "fang") {
+      ellipse(0, -s * .44, s * .46, s * .38, "#df655b", "#312a38", 6);
+      ctx.beginPath();
+      ctx.moveTo(-s * .35, -s * .65); ctx.lineTo(-s * .35, -s * 1.02); ctx.lineTo(-s * .05, -s * .72);
+      ctx.moveTo(s * .15, -s * .7); ctx.lineTo(s * .38, -s * .98); ctx.lineTo(s * .37, -s * .58);
+      ctx.fillStyle = "#b63e4d"; ctx.fill(); ctx.strokeStyle = "#312a38"; ctx.lineWidth = 5; ctx.stroke();
+      line(-s * .22, -s * .58, -s * .08, -s * .5, "#312a38", 5);
+      line(s * .22, -s * .58, s * .08, -s * .5, "#312a38", 5);
+      ctx.beginPath(); ctx.moveTo(-s * .15, -s * .32); ctx.lineTo(-s * .03, -s * .16); ctx.lineTo(s * .08, -s * .33);
+      ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = "#312a38"; ctx.lineWidth = 3; ctx.stroke();
+      line(-s * .25, -s * .1, -s * .3 + walk * 4, 2, "#312a38", 6);
+      line(s * .2, -s * .1, s * .25 - walk * 4, 2, "#312a38", 6);
+    } else if (a.kind === "brute") {
+      ellipse(0, -s * .42, s * .5, s * .39, "#777a82", "#272733", 7);
+      for (const side of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(side * s * .2, -s * .7); ctx.lineTo(side * s * .38, -s * .98); ctx.lineTo(side * s * .43, -s * .61);
+        ctx.fillStyle = "#b9b0a2"; ctx.fill(); ctx.strokeStyle = "#272733"; ctx.lineWidth = 5; ctx.stroke();
+      }
+      roundedRect(-s * .31, -s * .7, s * .62, s * .34, 8);
+      ctx.fillStyle = "#4e5260"; ctx.fill(); ctx.strokeStyle = "#272733"; ctx.lineWidth = 5; ctx.stroke();
+      line(-s * .2, -s * .55, -s * .07, -s * .49, "#ffdc54", 6);
+      line(s * .2, -s * .55, s * .07, -s * .49, "#ffdc54", 6);
+      line(-s * .31, -s * .12, -s * .33 + walk * 4, 3, "#272733", 8);
+      line(s * .28, -s * .12, s * .31 - walk * 4, 3, "#272733", 8);
+    } else {
+      // Boss
+      ellipse(0, -s * .43, s * .53, s * .43, "#5f536f", "#242332", 8);
+      ctx.beginPath();
+      for (let i = 0; i < 9; i++) {
+        const x = -s * .45 + i * s * .112;
+        ctx.lineTo(x, -s * (.73 + (i % 2 ? .28 : .05)));
+      }
+      ctx.lineTo(s * .48, -s * .55); ctx.lineTo(-s * .48, -s * .55); ctx.closePath();
+      ctx.fillStyle = "#c6465e"; ctx.fill(); ctx.strokeStyle = "#242332"; ctx.lineWidth = 7; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-s * .37, -s * .63); ctx.lineTo(-s * .48, -s * .97); ctx.lineTo(-s * .17, -s * .72);
+      ctx.moveTo(s * .2, -s * .7); ctx.lineTo(s * .48, -s * 1.01); ctx.lineTo(s * .4, -s * .58);
+      ctx.fillStyle = "#877892"; ctx.fill(); ctx.stroke();
+      line(-s * .24, -s * .55, -s * .07, -s * .46, "#ffd84f", 8);
+      line(s * .24, -s * .55, s * .07, -s * .46, "#ffd84f", 8);
+      ctx.beginPath(); ctx.arc(0, -s * .27, s * .19, 0.15, Math.PI - .15);
+      ctx.strokeStyle = "#242332"; ctx.lineWidth = 7; ctx.stroke();
+      line(-s * .32, -s * .08, -s * .36 + walk * 4, 3, "#242332", 10);
+      line(s * .3, -s * .08, s * .34 - walk * 4, 3, "#242332", 10);
+    }
+  }
+
+  const ALLY_SPRITE_INDEX = {
+    moco: 0, shield: 1, archer: 2, ram: 3, mage: 4,
+    healer: 4, assassin: 0, frost: 2, knight: 1, bomber: 4,
+    sniper: 2, berserker: 0, titan: 3, drummer: 1, scout: 0,
+  };
+  const ENEMY_SPRITE_INDEX = {
+    sprout: 0, swarm: 0, fang: 1, wolf: 1, brute: 2, shell: 2,
+    boss: 3, king: 3, nightlord: 3, spitter: 0, toxic: 0,
+    shaman: 1, priest: 1, jugger: 2, wraith: 1,
+  };
+
+  function pixelRect(x, y, w, h, color, outline = null, thickness = 4) {
+    x = Math.round(x);
+    y = Math.round(y);
+    w = Math.round(w);
+    h = Math.round(h);
+    if (outline) {
+      ctx.fillStyle = outline;
+      ctx.fillRect(x - thickness, y - thickness, w + thickness * 2, h + thickness * 2);
+    }
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+  }
+
+  function drawPixelBase(team) {
+    const ally = team === "ally";
+    const x = ally ? PLAYER_BASE_X : ENEMY_BASE_X;
+    const hp = ally ? state.playerHp : state.enemyHp;
+    const dir = ally ? 1 : -1;
+    const stone = ally ? "#d7cba3" : "#66596f";
+    const darkStone = ally ? "#8f8c78" : "#40394d";
+    const roof = ally ? "#d9903d" : "#a63e59";
+    const accent = ally ? "#4aa7c6" : "#d45865";
+    const outline = "#202231";
+    const dead = hp <= 0;
+
+    ctx.save();
+    ctx.globalAlpha = dead ? 0.55 : 1;
+    ctx.translate(Math.round(x), Math.round(GROUND));
+    ctx.scale(dir * VIEW_SCALE, VIEW_SCALE);
+
+    pixelRect(-72, 5, 144, 16, "rgba(20,31,25,.25)");
+    pixelRect(-64, -28, 128, 32, darkStone, outline, 5);
+    pixelRect(-56, -134, 104, 106, stone, outline, 6);
+
+    // Pixel stonework.
+    pixelRect(-48, -116, 38, 22, ally ? "#eee1bc" : "#796780");
+    pixelRect(-2, -116, 42, 22, ally ? "#c3b891" : "#51465c");
+    pixelRect(-48, -86, 30, 22, ally ? "#b7ad8e" : "#51465c");
+    pixelRect(-10, -86, 50, 22, ally ? "#e8dbb5" : "#796780");
+    pixelRect(-48, -56, 43, 20, ally ? "#e8dbb5" : "#796780");
+    pixelRect(3, -56, 37, 20, ally ? "#b7ad8e" : "#51465c");
+
+    // Battlements and roof.
+    for (let i = 0; i < 4; i++) {
+      pixelRect(-58 + i * 31, -154, 22, 26, roof, outline, 5);
+    }
+    pixelRect(-59, -136, 116, 18, roof, outline, 5);
+
+    // Door and windows.
+    pixelRect(-17, -63, 34, 35, "#2f3141", outline, 4);
+    pixelRect(-35, -105, 16, 20, ally ? "#6ad1e4" : "#e7b64d", outline, 4);
+    pixelRect(16, -105, 16, 20, ally ? "#6ad1e4" : "#e7b64d", outline, 4);
+    pixelRect(-29, -101, 4, 12, "#e7f7e9");
+    pixelRect(22, -101, 4, 12, "#fff1a6");
+
+    // Flag and cannon.
+    pixelRect(-43, -217, 6, 64, "#282a38");
+    pixelRect(-37, -211, 58, 34, accent, outline, 4);
+    pixelRect(-29, -201, 20, 14, ally ? "#f7df71" : "#312d3d");
+    pixelRect(33, -139, 58, 18, darkStone, outline, 5);
+    pixelRect(82, -143, 17, 26, darkStone, outline, 4);
+
+    // Damage pixels.
+    if (hp < (ally ? state.playerMaxHp : state.enemyMaxHp) * 0.5) {
+      pixelRect(-5, -126, 7, 18, outline);
+      pixelRect(1, -115, 15, 7, outline);
+      pixelRect(-32, -73, 18, 7, outline);
+    }
+    ctx.restore();
+  }
+
+  function drawPixelFighter(actor) {
+    const ally = actor.team === "ally";
+    const extraAllySprite = ally ? EXTRA_ALLY_SPRITES[actor.id] : null;
+    const extraEnemySprite = ally ? null : EXTRA_ENEMY_SPRITES[actor.id];
+    const isRockShield = ally && actor.id === "titan";
+    const unlockIndex = ally ? UNLOCKABLE_SPRITE_INDEX[actor.id] : undefined;
+    const hasUnlockableSprite = ally && unlockIndex !== undefined;
+    const hasUniqueSprite = Boolean(extraAllySprite || extraEnemySprite) || isRockShield || hasUnlockableSprite;
+    const sheet = extraAllySprite
+      ? extraAllySprite.image
+      : (extraEnemySprite
+        ? extraEnemySprite.image
+        : (isRockShield
+          ? rockShieldPixels
+          : (hasUnlockableSprite ? unlockablePixels : (ally ? allyPixels : enemyPixels))));
+    const uniqueAlly = hasUniqueSprite && Boolean(sheet);
+    const index = ally
+      ? (ALLY_SPRITE_INDEX[actor.kind] ?? actor.sprite ?? 0)
+      : (ENEMY_SPRITE_INDEX[actor.kind] ?? actor.sprite ?? 0);
+    const crop = extraAllySprite
+      ? extraAllySprite.crop
+      : (extraEnemySprite
+        ? extraEnemySprite.crop
+        : (isRockShield
+          ? ROCK_SHIELD_CROP
+          : (hasUnlockableSprite ? UNLOCKABLE_CROPS[unlockIndex] : (ally ? ALLY_CROPS[index] : ENEMY_CROPS[index]))));
+    if (!sheet || !crop || ("complete" in sheet && (!sheet.complete || !sheet.naturalWidth))) return;
+
+    const sourceX = crop[0];
+    const sourceY = crop[1];
+    const sourceW = crop[2] - crop[0];
+    const sourceH = crop[3] - crop[1];
+    const walk = actor.moving ? Math.sin(actor.age * actor.speed * 0.2 + actor.seed) : 0;
+    const idle = Math.sin(actor.age * 2.8 + actor.seed);
+    const attackProgress = actor.attackAnim > 0
+      ? 1 - actor.attackAnim / actor.attackDuration
+      : 0;
+    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
+    const deathT = clamp(actor.death / 0.7, 0, 1);
+    const drawH = Math.round(actor.size * (ally ? 3.45 : 3.35));
+    const drawW = Math.round(drawH * sourceW / sourceH);
+    const jump = actor.dead ? 0 : Math.round(
+      actor.moving ? Math.abs(walk) * 5 : (idle + 1) * 0.7
+    );
+    const lunge = Math.round(attack * (actor.projectile ? -4 : 13) * actor.dir);
+    const recoilDir = actor.team === "ally" ? -1 : 1;
+    const recoilOffset = Math.round(recoilDir * actor.recoil * 38);
+    const spawnScale = easeOut(actor.spawnAnim);
+    const bounce = actor.moving ? 1 + Math.abs(walk) * 0.03 : 1;
+    const bodyTilt = actor.moving ? walk * 0.02 : idle * 0.004;
+
+    ctx.save();
+    ctx.translate(Math.round(actor.x + lunge + recoilOffset), Math.round(actor.y - jump));
+    ctx.scale(spawnScale * bounce, spawnScale * bounce);
+    ctx.rotate(bodyTilt);
+    ctx.globalAlpha = actor.dead ? 1 - deathT : 1;
+    if (actor.dead) {
+      ctx.translate(0, -drawH * 0.3);
+      ctx.rotate(deathT * Math.PI * 0.45);
+    }
+
+    pixelRect(-drawW * 0.38, 2 + jump, drawW * 0.76, 8, "rgba(21,30,24,.28)");
+    if (actor.moving && Math.abs(walk) > 0.68) {
+      ctx.save();
+      ctx.globalAlpha = 0.13;
+      ctx.drawImage(
+        sheet,
+        sourceX, sourceY, sourceW, sourceH,
+        Math.round(-drawW / 2 - 7), Math.round(-drawH), drawW, drawH
+      );
+      ctx.restore();
+    }
+    if (actor.hitFlash > 0) {
+      ctx.filter = "brightness(2.4) saturate(.2)";
+    } else if (actor.tint && !uniqueAlly) {
+      ctx.filter = actor.tint;
+    }
+    ctx.drawImage(
+      sheet,
+      sourceX, sourceY, sourceW, sourceH,
+      Math.round(-drawW / 2), Math.round(-drawH), drawW, drawH
+    );
+    ctx.filter = "none";
+
+    if (actor.attackAnim > 0 && actor.projectile) {
+      const charge = Math.sin(attackProgress * Math.PI);
+      const front = drawW * 0.47;
+      pixelRect(front - 4, -drawH * 0.63 - 4, 8, 8, actor.shot || (actor.kind === "mage" ? "#ffe26a" : "#a8ec73"));
+      if (charge > 0.45) {
+        pixelRect(front - 9, -drawH * 0.63 - 2, 18, 4, "rgba(255,245,181,.8)");
+        pixelRect(front - 2, -drawH * 0.63 - 9, 4, 18, "rgba(255,245,181,.8)");
+      }
+    }
+
+    if (actor.hp < actor.maxHp && !actor.dead) {
+      const barW = Math.max(30, drawW);
+      pixelRect(-barW / 2, -drawH - 12, barW, 7, "#242634");
+      pixelRect(
+        -barW / 2 + 2, -drawH - 10,
+        Math.max(0, (barW - 4) * actor.hp / actor.maxHp), 3,
+        ally ? "#50d47b" : "#ef5b62"
+      );
+    }
+    ctx.restore();
+  }
+
+  function drawProjectiles() {
+    for (const p of state.projectiles) {
+      ctx.save();
+      ctx.translate(Math.round(p.x), Math.round(p.y));
+      if (p.kind === "mage") {
+        const pulse = Math.floor(p.age * 10) % 2 ? 3 : 0;
+        pixelRect(-5, -17 - pulse, 10, 34 + pulse * 2, "#fff4a0", "#a76331", 3);
+        pixelRect(-17 - pulse, -5, 34 + pulse * 2, 10, "#ffe04d", "#a76331", 3);
+        pixelRect(-9, -9, 18, 18, "#fff8c7");
+      } else if (p.kind === "bomber") {
+        pixelRect(-12, -12, 24, 24, "#ff8a4a", "#6a2a16", 3);
+        pixelRect(-5, -18, 10, 10, "#ffe08a");
+      } else if (p.kind === "frost" || p.kind === "sniper") {
+        pixelRect(-11, -4, 22, 8, p.color, "#27445c", 3);
+        pixelRect(-4, -11, 8, 22, "#e7f6ff", "#27445c", 2);
+      } else if (p.kind === "spitter" || p.kind === "toxic") {
+        pixelRect(-10, -10, 20, 20, p.color, "#28452d", 3);
+        pixelRect(-4, -16, 8, 8, "#d5ff72");
+      } else if (p.kind === "shaman" || p.kind === "priest") {
+        pixelRect(-12, -4, 24, 8, p.color, "#432750", 3);
+        pixelRect(-4, -12, 8, 24, "#f2b5ff", "#432750", 2);
+      } else if (p.kind === "healer") {
+        pixelRect(-10, -4, 20, 8, "#7ce5c0", "#27584e", 3);
+        pixelRect(-4, -10, 8, 20, "#c6ffe9", "#27584e", 2);
+      } else {
+        pixelRect(-14, -2, 25, 5, "#67422e");
+        pixelRect(8, -7, 13, 14, p.color || "#74c94e", "#274b2c", 3);
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawEffects() {
+    for (const p of state.particles) {
+      ctx.save();
+      ctx.globalAlpha = clamp(p.life / p.maxLife, 0, 1);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.fillStyle = p.color;
+      const progress = 1 - p.life / p.maxLife;
+      if (p.kind === "ring") {
+        const radius = Math.round(p.size * (0.35 + progress * 0.9));
+        const thick = Math.max(2, Math.round(5 * (1 - progress)));
+        pixelRect(-radius, -radius, radius * 2, thick, p.color);
+        pixelRect(-radius, radius - thick, radius * 2, thick, p.color);
+        pixelRect(-radius, -radius, thick, radius * 2, p.color);
+        pixelRect(radius - thick, -radius, thick, radius * 2, p.color);
+      } else if (p.kind === "slash") {
+        const length = p.size * (0.6 + progress * 0.65);
+        for (let i = 0; i < 6; i++) {
+          const px = p.dir * (i * length / 6);
+          const py = -length * 0.45 + i * length * 0.16;
+          pixelRect(px - 4, py - 4, 9, 9, i < 2 ? "#ffffff" : p.color);
+        }
+      } else if (p.kind === "shock") {
+        const width = p.size * (0.5 + progress * 1.5);
+        pixelRect(-width / 2, -3, width, 7, p.color);
+        pixelRect(-width * 0.32, -10, width * 0.64, 5, "#fff8d4");
+      } else if (p.kind === "impact") {
+        const radius = p.size * (0.5 + progress);
+        pixelRect(-radius, -3, radius * 2, 7, p.color);
+        pixelRect(-3, -radius, 7, radius * 2, p.color);
+        pixelRect(-radius * .55, -radius * .55, 7, 7, "#ffffff");
+        pixelRect(radius * .45, radius * .35, 6, 6, "#ffffff");
+      } else if (p.kind === "star") {
+        pixelRect(-p.size / 3, -p.size, p.size * .66, p.size * 2, p.color);
+        pixelRect(-p.size, -p.size / 3, p.size * 2, p.size * .66, p.color);
+      } else if (p.kind === "beam") {
+        pixelRect(-p.size * 2, -p.size / 2, p.size * 4, p.size, p.color);
+      } else {
+        pixelRect(-p.size / 2, -p.size / 2, p.size, p.size, p.color);
+      }
+      ctx.restore();
+    }
+    for (const t of state.texts) {
+      ctx.save();
+      ctx.globalAlpha = clamp(t.life / t.maxLife, 0, 1);
+      ctx.font = `900 ${t.size}px "Gowun Dodum", sans-serif`;
+      ctx.textAlign = "center";
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(35,35,48,.8)";
+      ctx.strokeText(t.text, t.x, t.y);
+      ctx.fillStyle = t.color;
+      ctx.fillText(t.text, t.x, t.y);
+      ctx.restore();
+    }
+  }
+
+  function drawAmbience() {
+    // Pixel fireflies and drifting ground mist keep the battlefield alive.
+    for (let i = 0; i < 15; i++) {
+      const baseX = (i * 97 + 41) % W;
+      const x = (baseX + state.time * (3 + i % 4)) % W;
+      const y = GROUND - 270 + (i * 37 % 175) + Math.sin(state.time * 1.4 + i * 2.1) * 9;
+      const glow = 0.25 + (Math.sin(state.time * 3 + i) + 1) * 0.22;
+      ctx.fillStyle = `rgba(236, 213, 94, ${glow})`;
+      ctx.fillRect(Math.round(x), Math.round(y), i % 3 === 0 ? 4 : 3, i % 3 === 0 ? 4 : 3);
+    }
+
+    const mistOffset = (state.time * 9) % 220;
+    ctx.fillStyle = "rgba(137, 166, 178, .055)";
+    for (let i = -1; i < 7; i++) {
+      const x = i * 220 + mistOffset;
+      ctx.fillRect(Math.round(x), GROUND - 52 + (i % 2) * 13, 145, 10);
+      ctx.fillRect(Math.round(x + 28), GROUND - 42 + (i % 2) * 13, 185, 7);
+    }
+
+    const vignette = ctx.createLinearGradient(0, 0, 0, H);
+    vignette.addColorStop(0, "rgba(2, 6, 18, .18)");
+    vignette.addColorStop(0.55, "rgba(2, 6, 18, 0)");
+    vignette.addColorStop(1, "rgba(2, 6, 18, .2)");
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function draw() {
+    ctx.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, W, H);
+    const shakePower = state.shake * 8;
+    const sx = Math.round(rand(-shakePower, shakePower));
+    const sy = Math.round(rand(-shakePower * .5, shakePower * .5));
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(sx, sy);
+    drawBackground();
+    drawAmbience();
+    drawPixelBase("ally");
+    drawPixelBase("enemy");
+
+    const fighters = [...state.units, ...state.enemies].sort((a, b) => {
+      const laneSort = a.y - b.y;
+      return laneSort || a.x - b.x;
+    });
+    for (const fighter of fighters) drawPixelFighter(fighter);
+    drawProjectiles();
+    drawEffects();
+    ctx.restore();
+
+    if (state.flash > 0) {
+      ctx.fillStyle = `rgba(180,240,255,${state.flash * 1.5})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  let last = performance.now();
+  function loop(now) {
+    const wrap = canvas.parentElement;
+    if (Math.abs(wrap.clientWidth - W) > 1 || Math.abs(wrap.clientHeight - H) > 1) {
+      layoutBattle();
+    }
+    const dt = clamp((now - last) / 1000, 0, 0.04);
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  function setCloudStatus(stateName, text) {
+    if (!ui.cloudSaveStatus) return;
+    ui.cloudSaveStatus.dataset.state = stateName;
+    ui.cloudSaveStatus.textContent = text;
+  }
+
+  async function syncCloudSave() {
+    const cloud = window.FurCloudSave;
+    if (!cloud?.configured || !cloud.currentUser) return;
+    setCloudStatus("saving", "동기화 중…");
+    try {
+      const remote = await cloud.loadCurrent();
+      const localTime = localUpdatedAt();
+      if (remote?.profile && remote.updatedAt > localTime) {
+        state.profile = normalizeProfile(remote.profile);
+        state.unlocked = Math.max(0, Math.min(STAGES.length - 1, Number(remote.unlocked) || 0));
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(state.profile));
+        localStorage.setItem(SAVE_KEY, String(state.unlocked));
+        localStorage.setItem(LOCAL_UPDATED_KEY, String(remote.updatedAt));
+        buildCards();
+        renderStageList();
+        updateCollectionUI();
+        renderDeckBuilder();
+        updateUI();
+        setCloudStatus("online", "클라우드 불러옴");
+        return;
+      }
+
+      const updatedAt = localTime || Date.now();
+      localStorage.setItem(LOCAL_UPDATED_KEY, String(updatedAt));
+      await cloud.saveNow(cloudSnapshot(updatedAt));
+      setCloudStatus("saved", "클라우드 저장됨");
+    } catch (error) {
+      console.warn("Cloud sync failed", error);
+      setCloudStatus("error", "로컬 저장 중");
+    }
+  }
+
+  window.addEventListener("fur-cloud-status", (event) => {
+    setCloudStatus(event.detail?.state || "offline", event.detail?.text || "로컬 저장 중");
+  });
+  window.addEventListener("fur-cloud-ready", syncCloudSave);
+  ui.cloudSaveBtn?.addEventListener("click", async () => {
+    const cloud = window.FurCloudSave;
+    if (!cloud?.configured) {
+      setCloudStatus("setup", "설정값 필요");
+      return;
+    }
+    try {
+      if (cloud.currentUser) {
+        const updatedAt = Date.now();
+        localStorage.setItem(LOCAL_UPDATED_KEY, String(updatedAt));
+        await cloud.saveNow(cloudSnapshot(updatedAt));
+      } else {
+        await cloud.signIn();
+      }
+    } catch (error) {
+      console.warn("Cloud login failed", error);
+      setCloudStatus("error", "로그인 취소/실패");
+    }
+  });
+
+  if (allySheet.complete && allySheet.naturalWidth) allyPixels = allySheet;
+  if (enemySheet.complete && enemySheet.naturalWidth) enemyPixels = enemySheet;
+  if (unlockableSheet.complete && unlockableSheet.naturalWidth) {
+    unlockablePixels = unlockableSheet;
+  }
+  if (rockShieldSheet.complete && rockShieldSheet.naturalWidth) {
+    rockShieldPixels = rockShieldSheet;
+  }
+  layoutBattle();
+  window.addEventListener("resize", layoutBattle);
+  if (window.ResizeObserver) {
+    new ResizeObserver(layoutBattle).observe(canvas.parentElement);
+  }
+  buildCards();
+  renderStageList();
+  updateCollectionUI();
+  renderDeckBuilder();
+  updateUI();
+  requestAnimationFrame(loop);
+})();
