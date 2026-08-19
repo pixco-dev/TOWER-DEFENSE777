@@ -1261,16 +1261,35 @@ kbd {
 
 @media (max-width: 900px) {
   .title-content {
+    height: 100dvh;
     max-height: 100dvh;
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
-    gap: 12px;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px 0 14px;
   }
   .pixel-logo { align-self: end; }
-  .pixel-logo h1 { font-size: clamp(52px, 16vw, 88px); }
-  .pixel-logo p { margin-top: 16px; font-size: 12px; }
-  .title-menu { width: min(380px, 92vw); margin: 0 auto 24px; }
-  .title-version { right: 50%; bottom: 8px; transform: translateX(50%); white-space: nowrap; }
+  .logo-kicker { margin-bottom: 6px; padding: 4px 9px; }
+  .pixel-logo h1 { font-size: clamp(46px, 14vw, 76px); }
+  .pixel-logo p { margin-top: 8px; padding: 4px 12px; font-size: 11px; }
+  .title-menu {
+    width: min(380px, 92vw);
+    min-height: 0;
+    align-self: stretch;
+    gap: 6px;
+    margin: 0 auto;
+    padding-bottom: 4px;
+    overflow-y: auto;
+  }
+  .stage-board { padding: 7px; }
+  .board-label { margin-bottom: 5px; }
+  .stage-list { max-height: min(28dvh, 200px); gap: 4px; }
+  .stage-pick { grid-template-columns: 46px 1fr auto; padding: 5px 7px; }
+  .stage-pick .code { padding: 4px 0; }
+  .title-start { min-height: 50px; padding: 7px 13px 7px 18px; }
+  .title-start span { font-size: 21px; }
+  .title-sub { padding: 7px 9px; }
+  .title-version { display: none; }
   .how-grid { grid-template-columns: 1fr; }
   .deck-panel { width: calc(100vw - 24px); height: calc(100dvh - 24px); padding: 14px; }
   .deck-heading { gap: 8px; padding-right: 34px; }
@@ -1290,4 +1309,67 @@ kbd {
   .worker-copy small, .cannon-card small, .command-card small { display: none; }
   .unit-card .unit-name { display: none; }
   .start-tips { grid-template-columns: 1fr; }
+}
+
+/* Tablets and phones in landscape have plenty of width but very little height.
+   Keep the centre HUD from growing over the wave announcement. */
+@media (max-height: 700px) and (orientation: landscape) {
+  .title-content {
+    height: 100dvh;
+    padding: 8px 0;
+  }
+
+  .title-menu {
+    align-self: center;
+    gap: 6px;
+    margin-bottom: 0;
+  }
+
+  .stage-board { padding: 7px; }
+  .board-label { margin-bottom: 5px; }
+  .stage-list { max-height: min(33dvh, 210px); gap: 4px; }
+  .stage-pick { padding: 5px 7px; }
+  .stage-pick .code { padding: 4px 0; }
+  .title-start { min-height: 48px; padding: 7px 13px 7px 18px; }
+  .title-start span { font-size: 21px; }
+  .title-sub { padding: 7px 9px; }
+  .title-version { display: none; }
+
+  .battle-hud {
+    height: 50px;
+    grid-template-columns: 1fr minmax(112px, 150px) 1fr auto;
+    padding: 3px 8px 6px;
+  }
+
+  .stage-badge {
+    top: 0;
+    align-self: center;
+    min-height: 42px;
+    padding: 2px 8px 4px;
+  }
+
+  .stage-badge > span,
+  .stage-badge > small,
+  #stage-progress {
+    display: none;
+  }
+
+  .stage-badge strong {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  .stage-badge .wave-label {
+    font-size: 9px;
+    line-height: 1.1;
+  }
+
+  .battle-message {
+    top: 64px;
+    max-width: calc(100vw - 24px);
+    padding: 7px 16px;
+    font-size: 16px;
+    white-space: nowrap;
+  }
 }
