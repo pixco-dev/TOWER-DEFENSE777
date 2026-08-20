@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest?v=1" />
   <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/app-icon.svg" />
-  <link rel="stylesheet" href="styles.css?v=22" />
+  <link rel="stylesheet" href="styles.css?v=23" />
 </head>
 <body>
   <section id="title-screen" class="title-screen">
@@ -39,6 +39,10 @@
           <b id="deck-summary">5 / 10</b>
         </button>
         <button id="how-btn" class="title-sub" type="button">조작법 보기</button>
+        <button id="wanted-btn" class="title-sub wanted-menu-btn" type="button">
+          <span>오늘의 수배 대원</span>
+          <b id="wanted-count">3</b>
+        </button>
         <button id="chest-btn" class="title-sub chest-menu-btn" type="button">
           보급 상자 <b id="chest-count">0</b>
           <small id="collection-count">5 / 15 보유</small>
@@ -93,6 +97,17 @@
         </div>
       </div>
 
+      <div id="wanted-panel" class="how-panel wanted-panel hidden">
+        <button id="wanted-close-btn" class="modal-close" type="button" aria-label="수배 대원 닫기">×</button>
+        <div class="wanted-heading">
+          <span>MOONLIGHT WANTED</span>
+          <h2>오늘 발견 가능한 대원</h2>
+          <p>지정 스테이지에서 조건을 달성하면 상자 없이 즉시 영입됩니다.</p>
+          <small id="wanted-date"></small>
+        </div>
+        <div id="wanted-list" class="wanted-list"></div>
+      </div>
+
       <div id="chest-panel" class="how-panel chest-panel hidden">
         <button id="chest-close-btn" class="modal-close" type="button" aria-label="상자 닫기">×</button>
         <h2>달빛 보급 상자</h2>
@@ -104,10 +119,11 @@
           <span><b>5%</b> 훈련서</span>
         </div>
         <p id="chest-desc">이기면 상자를 줍니다. 첫 클리어와 보스전은 더 줍니다.</p>
+        <div id="recruit-choice" class="recruit-choice hidden"></div>
         <button id="chest-open-btn" class="primary-btn" type="button">상자 열기</button>
       </div>
 
-      <span class="title-version">MOONLIGHT SQUAD · v4.9</span>
+      <span class="title-version">MOONLIGHT SQUAD · v5.0</span>
     </div>
   </section>
 
@@ -217,7 +233,7 @@
 
   <script src="firebase-config.js?v=2"></script>
   <script type="module" src="firebase-save.js?v=1"></script>
-  <script src="game.js?v=24"></script>
+  <script src="game.js?v=25"></script>
   <script src="pwa.js?v=1"></script>
 </body>
 </html>

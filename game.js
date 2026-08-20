@@ -65,6 +65,13 @@
     chestCount: document.getElementById("chest-count"),
     collectionCount: document.getElementById("collection-count"),
     chestDesc: document.getElementById("chest-desc"),
+    recruitChoice: document.getElementById("recruit-choice"),
+    wantedBtn: document.getElementById("wanted-btn"),
+    wantedCount: document.getElementById("wanted-count"),
+    wantedPanel: document.getElementById("wanted-panel"),
+    wantedCloseBtn: document.getElementById("wanted-close-btn"),
+    wantedDate: document.getElementById("wanted-date"),
+    wantedList: document.getElementById("wanted-list"),
     cloudSaveBtn: document.getElementById("cloud-save-btn"),
     cloudSaveStatus: document.getElementById("cloud-save-status"),
     playerHp: document.getElementById("player-hp"),
@@ -136,7 +143,7 @@
 
   const EXTRA_ALLY_SPRITES = {
     lightning_otter: { image: new Image(), src: "assets/pixel-ally-lightning-otter-v1.png", crop: [18, 107, 366, 380] },
-    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v1.png", crop: [18, 124, 366, 380] },
+    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v2.png", crop: [18, 124, 366, 380] },
     herb_hedgehog: { image: new Image(), src: "assets/pixel-ally-herb-hedgehog-v1.png", crop: [18, 106, 366, 380] },
   };
   const EXTRA_ENEMY_SPRITES = {
@@ -150,6 +157,8 @@
     sprite.image.addEventListener("load", () => {
       renderCardPortraits();
       renderDeckBuilder();
+      renderWantedBoard();
+      renderRecruitChoices();
     });
   }
   for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) sprite.image.src = sprite.src;
@@ -232,6 +241,8 @@
     allyPixels = allySheet;
     renderCardPortraits();
     renderDeckBuilder();
+    renderWantedBoard();
+    renderRecruitChoices();
   });
   unlockableSheet.addEventListener("load", () => {
     // The v4 atlas already has a transparent alpha channel. Reading its pixels
@@ -239,11 +250,15 @@
     unlockablePixels = unlockableSheet;
     renderCardPortraits();
     renderDeckBuilder();
+    renderWantedBoard();
+    renderRecruitChoices();
   });
   rockShieldSheet.addEventListener("load", () => {
     rockShieldPixels = rockShieldSheet;
     renderCardPortraits();
     renderDeckBuilder();
+    renderWantedBoard();
+    renderRecruitChoices();
   });
   enemySheet.addEventListener("load", () => {
     enemyPixels = enemySheet;
@@ -388,6 +403,52 @@
       speed: 30, range: 195, cooldown: 1.7, size: 64, recharge: 10.4, kind: "poisoner",
       projectile: true, splash: 76, poison: 5, poisonDamage: 16, unlockable: true, shot: "#b77cff",
       info: "독 물약으로 범위 피해와 지속 피해를 준다",
+    },
+    {
+      id: "wander_swordsman", name: "방랑검객", cost: 230, hp: 310, damage: 46,
+      speed: 68, range: 40, cooldown: 0.38, size: 54, recharge: 5.8, kind: "wanderer",
+      unlockable: true, sprite: 0, cleave: 30, role: "빠른 근접 연타",
+      tint: "sepia(.2) hue-rotate(325deg) saturate(1.2)", overlay: "rgba(235, 116, 92, .18)",
+      info: "빠른 쌍검 연타로 전열의 빈틈을 파고든다",
+    },
+    {
+      id: "moon_shooter", name: "달빛 사수", cost: 470, hp: 210, damage: 148,
+      speed: 31, range: 335, cooldown: 1.75, size: 58, recharge: 11.8, kind: "moonshot",
+      projectile: true, critChance: 0.2, critPower: 2.05, unlockable: true, sprite: 2,
+      shot: "#bfeaff", role: "긴 사거리 정밀 사격",
+      tint: "hue-rotate(175deg) saturate(.9) brightness(1.1)", overlay: "rgba(137, 210, 255, .2)",
+      info: "달빛 화살로 먼 적을 정밀하게 저격한다",
+    },
+    {
+      id: "timid_mage", name: "겁쟁이 마법사", cost: 360, hp: 230, damage: 82,
+      speed: 27, range: 290, cooldown: 1.55, size: 65, recharge: 9.6, kind: "timid",
+      projectile: true, splash: 76, knockback: 26, slow: 1.4, unlockable: true, sprite: 4,
+      shot: "#c9a7ff", role: "밀쳐내는 달빛 마법",
+      tint: "hue-rotate(38deg) saturate(.8) brightness(1.08)", overlay: "rgba(196, 150, 255, .2)",
+      info: "겁은 많지만 적을 밀어내는 마법은 확실하다",
+    },
+    {
+      id: "iron_hare", name: "철갑토끼", cost: 430, hp: 1040, damage: 48,
+      speed: 24, range: 48, cooldown: 1.05, size: 70, recharge: 11.5, kind: "ironhare",
+      unlockable: true, sprite: 1, guard: true, cleave: 52, role: "느리지만 높은 체력",
+      tint: "grayscale(.15) contrast(1.15) brightness(.92)", overlay: "rgba(160, 180, 205, .23)",
+      info: "철갑 방패로 긴 시간 전선을 붙잡는다",
+    },
+    {
+      id: "star_fox", name: "별길여우", cost: 420, hp: 245, damage: 118,
+      speed: 46, range: 285, cooldown: 1.12, size: 57, recharge: 9.4, kind: "starfox",
+      projectile: true, critChance: 0.28, critPower: 1.85, unlockable: true, sprite: 2,
+      shot: "#ffe17b", role: "연속 치명타 사격",
+      tint: "hue-rotate(320deg) saturate(1.2) brightness(1.1)", overlay: "rgba(255, 220, 100, .18)",
+      info: "별가루 화살로 치명타를 연이어 노린다",
+    },
+    {
+      id: "bomb_furball", name: "폭탄 털뭉치", cost: 350, hp: 290, damage: 96,
+      speed: 40, range: 175, cooldown: 1.45, size: 60, recharge: 8.8, kind: "bombfur",
+      projectile: true, splash: 142, knockback: 18, unlockable: true, sprite: 4,
+      shot: "#ffad66", role: "넓은 범위 폭발",
+      tint: "hue-rotate(345deg) saturate(1.55) brightness(.95)", overlay: "rgba(255, 104, 63, .23)",
+      info: "짧은 사거리 대신 거대한 폭발로 무리를 쓸어낸다",
     },
   ];
 
@@ -547,6 +608,42 @@
     S("8-5", "가시왕 옥좌", "★★★★★", 7800, 25000, 90, 32, 0.6, [["jugger", 0.35], ["priest", 0.35], ["wraith", 0.3]], "nightlord", 3.85, 5),
   ];
 
+  const WANTED_MISSIONS = [
+    {
+      unitId: "wander_swordsman", stageId: "2-4", tag: "검의 맹세",
+      condition: "근접 대원만 출격시켜 클리어",
+      test: () => state.deployedUnitIds.length > 0 && state.deployedUnitIds.every((id) => {
+        const unit = UNIT_TYPES.find((entry) => entry.id === id);
+        return unit && !unit.projectile && unit.range <= 90;
+      }),
+    },
+    {
+      unitId: "moon_shooter", stageId: "3-2", tag: "흔들리지 않는 성벽",
+      condition: "성채 HP 70% 이상으로 승리",
+      test: () => state.playerHp >= state.playerMaxHp * 0.7,
+    },
+    {
+      unitId: "timid_mage", stageId: "3-5", tag: "달빛 아래 용기",
+      condition: "보스전에서 달빛 지휘를 2회 사용",
+      test: () => state.commandUses >= 2,
+    },
+    {
+      unitId: "iron_hare", stageId: "2-5", tag: "철벽 전선",
+      condition: "방어형 대원을 3회 이상 출격",
+      test: () => state.tankDeployments >= 3,
+    },
+    {
+      unitId: "star_fox", stageId: "4-2", tag: "별보다 빠르게",
+      condition: "90초 안에 스테이지 클리어",
+      test: () => state.battleTime <= 90,
+    },
+    {
+      unitId: "bomb_furball", stageId: "4-4", tag: "폭발적인 소문",
+      condition: "최고 10 콤보 이상으로 승리",
+      test: () => state.bestCombo >= 10,
+    },
+  ];
+
   const SAVE_KEY = "fur-front-unlock";
   const PROFILE_KEY = "fur-front-profile-v2";
   const LOCAL_UPDATED_KEY = "fur-front-local-updated-v1";
@@ -586,6 +683,10 @@
         levels,
         duplicates: saved.duplicates && typeof saved.duplicates === "object" ? saved.duplicates : {},
         claimedStages: Array.isArray(saved.claimedStages) ? saved.claimedStages : [],
+        wantedClaims: Array.isArray(saved.wantedClaims) ? saved.wantedClaims : [],
+        pendingRecruitChoices: Array.isArray(saved.pendingRecruitChoices)
+          ? saved.pendingRecruitChoices.filter((id) => UNIT_TYPES.some((unit) => unit.id === id)).slice(0, 3)
+          : [],
       };
   }
 
@@ -622,6 +723,39 @@
 
   function ownsUnit(id) {
     return state.profile.units.includes(id);
+  }
+
+  function grantUnit(id) {
+    const unit = UNIT_TYPES.find((entry) => entry.id === id);
+    if (!unit || ownsUnit(id)) return null;
+    state.profile.units.push(id);
+    state.profile.levels[id] = 1;
+    if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(id);
+    return unit;
+  }
+
+  function localDayKey() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function hashText(text) {
+    let hash = 2166136261;
+    for (let i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  }
+
+  function dailyWantedMissions() {
+    const day = localDayKey();
+    return [...WANTED_MISSIONS]
+      .sort((a, b) => hashText(`${day}:${a.unitId}`) - hashText(`${day}:${b.unitId}`))
+      .slice(0, 3);
   }
 
   function unitLevel(id) {
@@ -688,14 +822,15 @@
 
   const INITIAL_PREP_TIME = 8;
 
-  function buildEndlessWave(stage, waveNumber) {
-    const baseCount = Math.max(3, Math.ceil(stage.count / (stage.waves || 3)));
-    const count = Math.min(baseCount + Math.floor((waveNumber - 1) / 2), baseCount + 8);
+  function buildWaveQueues(stage) {
+    const waveTotal = Math.max(1, stage.waves || 3);
     const pool = stageEnemyPool(stage);
-    const queue = [];
-    for (let i = 0; i < count; i++) queue.push(pickFromPool(pool));
-    if (stage.boss && waveNumber % 5 === 0) queue.push(stage.boss);
-    return queue;
+    const queues = Array.from({ length: waveTotal }, () => []);
+    for (let i = 0; i < stage.count; i++) {
+      queues[Math.min(waveTotal - 1, Math.floor(i * waveTotal / stage.count))].push(pickFromPool(pool));
+    }
+    if (stage.boss) queues[waveTotal - 1].push(stage.boss);
+    return queues;
   }
 
   const state = {
@@ -745,6 +880,9 @@
     bestCombo: 0,
     dangerLevel: 0,
     castleHint: false,
+    deployedUnitIds: [],
+    commandUses: 0,
+    tankDeployments: 0,
     profile: loadProfile(),
   };
 
@@ -847,6 +985,8 @@
     if (!type || !ownsUnit(type.id) || state.money < type.cost || state.cooldowns[type.id] > 0) return;
     state.money -= type.cost;
     state.cooldowns[type.id] = type.recharge;
+    state.deployedUnitIds.push(type.id);
+    if (type.guard || type.kind === "titan" || type.kind === "ironhare") state.tankDeployments += 1;
     const unit = makeFighter(type, "ally");
     state.units.push(unit);
     burst(BATTLE_START, unit.y - 18, "#8fdcf0", 16, 110);
@@ -879,24 +1019,26 @@
   }
 
   function updateSpawning(dt) {
-    if (!state.spawnQueue.length) {
-      if (!state.waveWaiting) {
-        state.waveWaiting = true;
-        const earlyRest = state.stageIndex < 10 ? 2.2 : (state.stageIndex < 20 ? 1 : 0);
-        state.waveBreak = Math.max(3.2, 4.2 + earlyRest - state.stageIndex * 0.045);
-        const supply = 55 + state.waveIndex * 20;
-        state.money = Math.min(state.maxMoney, state.money + supply);
-        showMessage(`다음 공세 접근 · 긴급 보급 +${supply}G`, 1.8);
-        sound("upgrade");
-      }
+    if (state.waveWaiting) {
       state.waveBreak -= dt;
       if (state.waveBreak <= 0) {
         state.waveWaiting = false;
         state.waveIndex += 1;
-        state.spawnQueue = buildEndlessWave(currentStage(), state.waveIndex);
+        state.spawnQueue = state.waveQueues.shift() || [];
         state.spawnTimer = 0.45;
         showMessage(`WAVE ${state.waveIndex} 시작!`, 1.6);
       }
+      return;
+    }
+    if (!state.spawnQueue.length) {
+      if (!state.waveQueues.length) return;
+      state.waveWaiting = true;
+      const earlyRest = state.stageIndex < 10 ? 2.2 : (state.stageIndex < 20 ? 1 : 0);
+      state.waveBreak = Math.max(3.2, 4.2 + earlyRest - state.stageIndex * 0.045);
+      const supply = 55 + state.waveIndex * 20;
+      state.money = Math.min(state.maxMoney, state.money + supply);
+      showMessage(`다음 공세 접근 · 긴급 보급 +${supply}G`, 1.8);
+      sound("upgrade");
       return;
     }
     state.spawnTimer -= dt;
@@ -944,6 +1086,7 @@
     if (state.mode !== "playing" || state.paused || state.command < state.commandMax) return;
     state.command = 0;
     state.commandBuff = 8;
+    state.commandUses += 1;
     state.playerHp = Math.min(state.playerMaxHp, state.playerHp + 260);
     for (const unit of state.units) {
       if (unit.dead) continue;
@@ -1469,7 +1612,14 @@
       state.profile.gold += clearGold;
       state.profile.materials += clearMaterials;
       progressionReward = `<br />보급 골드 <b>${clearGold}G</b> · 강화석 <b>${clearMaterials}개</b>`;
+      const wantedRecruits = evaluateWantedRewards(stage);
+      if (wantedRecruits.length) {
+        progressionReward += `<br /><b>수배 대원 영입: ${wantedRecruits.map((unit) => unit.name).join(", ")}</b>`;
+      }
       saveProfile();
+      buildCards();
+      renderDeckBuilder();
+      renderWantedBoard();
     }
     ui.overlayTitle.textContent = win
       ? (hasNext ? `${stage.id} 클리어!` : "전선 완전 돌파!")
@@ -1492,6 +1642,8 @@
 
   function reset() {
     const stage = currentStage();
+    const waveQueues = buildWaveQueues(stage);
+    const totalEnemies = waveQueues.reduce((sum, queue) => sum + queue.length, 0);
     Object.assign(state, {
       mode: "playing",
       paused: false,
@@ -1516,12 +1668,12 @@
       spawnTimer: 0,
       spawnIndex: 0,
       spawnQueue: [],
-      waveQueues: [],
+      waveQueues,
       waveIndex: 0,
-      waveTotal: 0,
+      waveTotal: waveQueues.length,
       waveBreak: INITIAL_PREP_TIME,
       waveWaiting: true,
-      totalEnemies: Infinity,
+      totalEnemies,
       spawnedCount: 0,
       kills: 0,
       combo: 0,
@@ -1529,6 +1681,9 @@
       bestCombo: 0,
       dangerLevel: 0,
       bossSpawned: false,
+      deployedUnitIds: [],
+      commandUses: 0,
+      tankDeployments: 0,
       shake: 0,
       flash: 0,
       messageTimer: 0,
@@ -1587,10 +1742,12 @@
     const stage = currentStage();
     ui.stageLabel.textContent = stage.id;
     ui.stageName.textContent = stage.name;
-    ui.stageProgress.textContent = `처치 ${state.kills} · 무한 증원`;
+    ui.stageProgress.textContent = `처치 ${Math.min(state.kills, state.totalEnemies)} / ${state.totalEnemies}`;
     ui.waveLabel.textContent = (state.waveWaiting
       ? `${state.waveIndex === 0 ? "준비" : "보급"} ${Math.max(0, Math.ceil(state.waveBreak))}초`
-      : `WAVE ${state.waveIndex} · 무한`) + (state.dangerLevel ? ` · 위협 ${"▲".repeat(state.dangerLevel)}` : "");
+      : (state.waveIndex >= state.waveTotal && !state.spawnQueue.length
+        ? "마지막 공세 종료"
+        : `WAVE ${state.waveIndex} / ${state.waveTotal}`)) + (state.dangerLevel ? ` · 위협 ${"▲".repeat(state.dangerLevel)}` : "");
     ui.workerLevel.textContent = `Lv.${state.worker}`;
     ui.workerCost.textContent = state.worker >= 8 ? "MAX" : `${workerCost()} G`;
     ui.workerBtn.disabled = state.worker >= 8 || state.money < workerCost() || state.mode !== "playing";
@@ -1792,6 +1949,7 @@
     ui.howPanel.classList.add("hidden");
     ui.chestPanel.classList.add("hidden");
     ui.deckPanel.classList.add("hidden");
+    ui.wantedPanel.classList.add("hidden");
     ui.titleScreen.classList.add("hidden");
     requestAnimationFrame(() => {
       layoutBattle();
@@ -1812,44 +1970,146 @@
     renderDeckBuilder();
   }
 
+  function renderWantedBoard() {
+    if (!ui.wantedList) return;
+    const missions = dailyWantedMissions();
+    ui.wantedList.innerHTML = "";
+    ui.wantedDate.textContent = `${localDayKey()} · 자정에 수배 명단 교체`;
+    const availableCount = missions.filter((mission) => !ownsUnit(mission.unitId)).length;
+    ui.wantedCount.textContent = availableCount;
+
+    missions.forEach((mission, index) => {
+      const unit = UNIT_TYPES.find((entry) => entry.id === mission.unitId);
+      if (!unit) return;
+      const owned = ownsUnit(unit.id);
+      const stageIndex = STAGES.findIndex((entry) => entry.id === mission.stageId);
+      const stageLocked = stageIndex > state.unlocked;
+      const card = document.createElement("article");
+      card.className = `wanted-card${owned ? " claimed" : ""}${stageLocked ? " locked" : ""}`;
+      card.innerHTML = `
+        <span class="wanted-rank">WANTED 0${index + 1}</span>
+        <canvas class="wanted-portrait" width="150" height="128" aria-hidden="true"></canvas>
+        <div class="wanted-copy">
+          <small>${owned ? "영입 완료" : mission.tag}</small>
+          <h3>${owned ? unit.name : `??? · ${unit.name}`}</h3>
+          <p><b>STAGE ${mission.stageId}</b><br />${mission.condition}</p>
+          <em>${owned ? "보유 대원" : (stageLocked ? "스테이지 잠김" : "조건 달성 시 즉시 영입")}</em>
+        </div>`;
+      ui.wantedList.appendChild(card);
+      drawUnitPortrait(card.querySelector("canvas"), unit);
+    });
+  }
+
+  function evaluateWantedRewards(stage) {
+    const recruited = [];
+    for (const mission of dailyWantedMissions()) {
+      if (mission.stageId !== stage.id || ownsUnit(mission.unitId) || !mission.test()) continue;
+      const unit = grantUnit(mission.unitId);
+      if (!unit) continue;
+      state.profile.wantedClaims.push(`${localDayKey()}:${mission.unitId}`);
+      recruited.push(unit);
+    }
+    return recruited;
+  }
+
   function updateCollectionUI() {
     const locked = UNIT_TYPES.filter((unit) => unit.unlockable && !ownsUnit(unit.id));
+    const hasPendingRecruit = state.profile.pendingRecruitChoices.length > 0;
     ui.chestCount.textContent = state.profile.chests;
     ui.collectionCount.textContent = `${state.profile.units.length} / ${UNIT_TYPES.length} 보유`;
     ui.deckSummary.textContent = `${state.profile.deck.length} / ${MAX_DECK_SIZE}`;
     ui.profileGold.textContent = state.profile.gold;
     ui.materialCount.textContent = state.profile.materials;
-    ui.chestOpenBtn.disabled = state.profile.chests <= 0;
-    ui.chestOpenBtn.textContent = state.profile.chests > 0 ? "상자 열기" : "상자 없음";
-    ui.chestDesc.innerHTML = state.profile.chests <= 0
-      ? "전투에서 이기면 상자를 얻습니다.<br />첫 클리어와 보스전은 상자를 더 줍니다."
-      : `상자 ${state.profile.chests}개 · 미보유 대원 ${locked.length}명<br />캐릭터 중복 시 <b>강화석 8개 + 보급 골드 180G</b>로 자동 전환됩니다.`;
+    ui.chestOpenBtn.disabled = state.profile.chests <= 0 || hasPendingRecruit;
+    ui.chestOpenBtn.textContent = hasPendingRecruit ? "대원 선택 중" : (state.profile.chests > 0 ? "상자 열기" : "상자 없음");
+    if (hasPendingRecruit) {
+      renderRecruitChoices();
+    } else {
+      ui.recruitChoice.classList.add("hidden");
+      ui.recruitChoice.innerHTML = "";
+      ui.chestDesc.innerHTML = state.profile.chests <= 0
+        ? "전투에서 이기면 상자를 얻습니다.<br />첫 클리어와 보스전은 상자를 더 줍니다."
+        : `상자 ${state.profile.chests}개 · 미보유 대원 ${locked.length}명<br />캐릭터 중복 시 <b>강화석 8개 + 보급 골드 180G</b>로 자동 전환됩니다.`;
+    }
+    renderWantedBoard();
+  }
+
+  function buildRecruitChoices() {
+    const pool = UNIT_TYPES.filter((unit) => unit.unlockable);
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, 3).map((unit) => unit.id);
+  }
+
+  function renderRecruitChoices() {
+    if (!ui.recruitChoice) return;
+    const ids = state.profile.pendingRecruitChoices;
+    if (!ids.length) {
+      ui.recruitChoice.classList.add("hidden");
+      ui.recruitChoice.innerHTML = "";
+      return;
+    }
+    ui.recruitChoice.classList.remove("hidden");
+    ui.recruitChoice.innerHTML = `
+      <div class="recruit-heading">
+        <strong>달빛이 세 명의 대원을 인도했습니다.</strong>
+        <small>실루엣 하나를 선택해 영입하세요. 나머지 둘은 떠납니다.</small>
+      </div>
+      <div class="recruit-grid"></div>`;
+    const grid = ui.recruitChoice.querySelector(".recruit-grid");
+    ids.forEach((id, index) => {
+      const unit = UNIT_TYPES.find((entry) => entry.id === id);
+      if (!unit) return;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "recruit-card";
+      button.innerHTML = `
+        <span>후보 ${"ABC"[index]}</span>
+        <canvas width="128" height="118" aria-hidden="true"></canvas>
+        <strong>${unit.role || unit.info}</strong>
+        <small>${ownsUnit(unit.id) ? "이미 만난 듯한 기척" : "새로운 기척"}</small>`;
+      button.addEventListener("click", () => chooseRecruit(unit.id));
+      grid.appendChild(button);
+      drawUnitPortrait(button.querySelector("canvas"), unit);
+    });
+  }
+
+  function chooseRecruit(id) {
+    if (!state.profile.pendingRecruitChoices.includes(id)) return;
+    const unit = UNIT_TYPES.find((entry) => entry.id === id);
+    if (!unit) return;
+    let resultText = "";
+    if (ownsUnit(id)) {
+      state.profile.duplicates[id] = (Number(state.profile.duplicates[id]) || 0) + 1;
+      state.profile.materials += 8;
+      state.profile.gold += 180;
+      resultText = `<b>${unit.name} 중복!</b><br />강화석 8개와 보급 골드 180G로 전환했습니다.`;
+    } else {
+      grantUnit(id);
+      resultText = `<b>${unit.name}</b> 영입 완료!<br />${unit.info}`;
+    }
+    state.profile.pendingRecruitChoices = [];
+    saveProfile();
+    sound("win");
+    buildCards();
+    renderDeckBuilder();
+    updateCollectionUI();
+    ui.chestDesc.innerHTML = resultText;
   }
 
   function openChest() {
-    if (state.profile.chests <= 0) return;
+    if (state.profile.chests <= 0 || state.profile.pendingRecruitChoices.length) return;
     state.profile.chests -= 1;
     const roll = Math.random();
     let resultText = "";
     let rewardColor = "#d58cff";
 
     if (roll < 0.55) {
-      const pool = UNIT_TYPES.filter((unit) => unit.unlockable);
-      const locked = pool.filter((unit) => !ownsUnit(unit.id));
-      const pickFrom = locked.length ? locked : pool;
-      const unit = pickFrom[Math.floor(Math.random() * pickFrom.length)];
-      rewardColor = unit.shot || unit.overlay || "#d58cff";
-      if (ownsUnit(unit.id)) {
-        state.profile.duplicates[unit.id] = (Number(state.profile.duplicates[unit.id]) || 0) + 1;
-        state.profile.materials += 8;
-        state.profile.gold += 180;
-        resultText = `<b>${unit.name} 중복!</b><br />강화석 8개와 보급 골드 180G로 전환했습니다.`;
-      } else {
-        state.profile.units.push(unit.id);
-        state.profile.levels[unit.id] = 1;
-        if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(unit.id);
-        resultText = `<b>${unit.name}</b> 신규 영입!<br />${unit.info}`;
-      }
+      state.profile.pendingRecruitChoices = buildRecruitChoices();
+      resultText = "<b>특수 영입 신호!</b><br />세 실루엣 중 함께할 대원 한 명을 선택하세요.";
+      rewardColor = "#d58cff";
     } else if (roll < 0.80) {
       const amount = 5 + Math.floor(Math.random() * 6);
       state.profile.materials += amount;
@@ -1931,12 +2191,14 @@
   ui.howBtn.addEventListener("click", () => {
     ui.chestPanel.classList.add("hidden");
     ui.deckPanel.classList.add("hidden");
+    ui.wantedPanel.classList.add("hidden");
     ui.howPanel.classList.remove("hidden");
   });
   ui.howCloseBtn.addEventListener("click", () => ui.howPanel.classList.add("hidden"));
   ui.deckBtn.addEventListener("click", () => {
     ui.howPanel.classList.add("hidden");
     ui.chestPanel.classList.add("hidden");
+    ui.wantedPanel.classList.add("hidden");
     renderDeckBuilder();
     ui.deckPanel.classList.remove("hidden");
   });
@@ -1945,9 +2207,18 @@
   ui.chestBtn.addEventListener("click", () => {
     ui.howPanel.classList.add("hidden");
     ui.deckPanel.classList.add("hidden");
+    ui.wantedPanel.classList.add("hidden");
     ui.chestPanel.classList.remove("hidden");
     updateCollectionUI();
   });
+  ui.wantedBtn.addEventListener("click", () => {
+    ui.howPanel.classList.add("hidden");
+    ui.deckPanel.classList.add("hidden");
+    ui.chestPanel.classList.add("hidden");
+    renderWantedBoard();
+    ui.wantedPanel.classList.remove("hidden");
+  });
+  ui.wantedCloseBtn.addEventListener("click", () => ui.wantedPanel.classList.add("hidden"));
   ui.chestCloseBtn.addEventListener("click", () => ui.chestPanel.classList.add("hidden"));
   ui.chestOpenBtn.addEventListener("click", openChest);
   ui.overlayBtn.addEventListener("click", handleOverlayAction);
@@ -1970,6 +2241,7 @@
         ui.howPanel.classList.add("hidden");
         ui.chestPanel.classList.add("hidden");
         ui.deckPanel.classList.add("hidden");
+        ui.wantedPanel.classList.add("hidden");
       }
       return;
     }
