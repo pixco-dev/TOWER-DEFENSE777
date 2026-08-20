@@ -293,24 +293,6 @@ button { font: inherit; }
   font-family: monospace;
 }
 
-.wanted-menu-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-color: #785f51;
-  color: #ffd59b;
-}
-
-.wanted-menu-btn b {
-  display: grid;
-  min-width: 27px;
-  height: 22px;
-  place-items: center;
-  background: #8c463f;
-  color: #fff2c4;
-  font-family: monospace;
-}
-
 .chest-menu-btn {
   display: flex;
   align-items: center;
@@ -371,91 +353,6 @@ button { font: inherit; }
   filter: grayscale(.7) brightness(.7);
   cursor: not-allowed;
 }
-
-.wanted-panel {
-  width: min(980px, calc(100vw - 32px));
-}
-
-.wanted-heading {
-  padding-right: 42px;
-  border-bottom: 3px solid #3b425c;
-}
-
-.wanted-heading > span {
-  color: #df8b79;
-  font-family: monospace;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: .18em;
-}
-
-.wanted-heading h2 { margin: 4px 0 5px; color: #f1ca65; }
-.wanted-heading p { margin: 0; color: #aeb6c8; font-size: 12px; }
-.wanted-heading small { display: block; margin: 10px 0 14px; color: #707991; font-family: monospace; }
-
-.wanted-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.wanted-card {
-  position: relative;
-  min-width: 0;
-  overflow: hidden;
-  border: 3px solid #60474b;
-  background: linear-gradient(145deg, #211b2b, #111626 60%);
-  box-shadow: inset 0 0 0 2px #2d3146;
-}
-
-.wanted-card.claimed { border-color: #47745c; background: linear-gradient(145deg, #172a28, #111626 65%); }
-.wanted-card.locked { filter: grayscale(.35); opacity: .7; }
-.wanted-rank { display: block; padding: 7px 9px; background: #743f43; color: #ffd79c; font-family: monospace; font-size: 9px; letter-spacing: .12em; }
-.wanted-card.claimed .wanted-rank { background: #315d4d; }
-.wanted-portrait { display: block; width: 100%; height: 132px; image-rendering: pixelated; }
-.wanted-card:not(.claimed) .wanted-portrait { filter: brightness(0) drop-shadow(0 0 8px #b16f7e); opacity: .86; }
-.wanted-copy { padding: 11px; }
-.wanted-copy small { color: #d8877a; font-size: 9px; }
-.wanted-copy h3 { margin: 4px 0 8px; color: #f0f1f5; font-size: 17px; }
-.wanted-copy p { min-height: 52px; margin: 0; color: #aeb6c8; font-size: 11px; line-height: 1.55; }
-.wanted-copy p b { color: #f1ca65; }
-.wanted-copy em { display: block; margin-top: 9px; color: #86d6de; font-size: 10px; font-style: normal; }
-
-.recruit-choice {
-  margin: 12px 0;
-  padding: 12px;
-  border: 3px solid #5b496e;
-  background: #101426;
-}
-
-.recruit-heading strong,
-.recruit-heading small { display: block; }
-.recruit-heading strong { color: #ffe17b; font-size: 14px; }
-.recruit-heading small { margin-top: 4px; color: #929bb1; font-size: 10px; }
-
-.recruit-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 11px;
-}
-
-.recruit-card {
-  min-width: 0;
-  padding: 8px;
-  border: 3px solid #3b425c;
-  background: #191e33;
-  color: #edf0f5;
-  cursor: pointer;
-}
-.recruit-card:hover { border-color: #f1ca65; transform: translateY(-2px); }
-.recruit-card > span { display: block; color: #f1ca65; font-family: monospace; font-size: 10px; }
-.recruit-card canvas { display: block; width: 100%; height: 112px; margin: 3px 0; filter: brightness(0) drop-shadow(0 0 6px #8f6da8); opacity: .9; image-rendering: pixelated; }
-.recruit-card strong,
-.recruit-card small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.recruit-card strong { color: #e9d9ff; font-size: 10px; }
-.recruit-card small { margin-top: 4px; color: #747e96; font-size: 9px; }
 
 .title-version {
   position: absolute;
@@ -1434,16 +1331,6 @@ kbd {
   .deck-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .deck-actions { align-items: stretch; flex-direction: column; }
   .deck-actions .primary-btn { width: 100%; }
-  .wanted-panel { width: calc(100vw - 24px); height: calc(100dvh - 24px); padding: 14px; }
-  .wanted-list { grid-template-columns: 1fr; }
-  .wanted-card { display: grid; grid-template-columns: 110px 1fr; }
-  .wanted-rank { position: absolute; z-index: 1; top: 0; left: 0; }
-  .wanted-portrait { height: 150px; align-self: center; }
-  .wanted-copy p { min-height: 0; }
-  .chest-panel { max-height: calc(100dvh - 24px); padding: 14px; }
-  .recruit-grid { gap: 5px; }
-  .recruit-card { padding: 5px; }
-  .recruit-card canvas { height: 88px; }
   .battle-hud { grid-template-columns: 1fr 88px 1fr auto; padding: 4px 6px; }
   .stage-badge small { display: none; }
   .crest { width: 28px; height: 28px; font-size: 10px; }

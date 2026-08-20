@@ -65,13 +65,6 @@
     chestCount: document.getElementById("chest-count"),
     collectionCount: document.getElementById("collection-count"),
     chestDesc: document.getElementById("chest-desc"),
-    recruitChoice: document.getElementById("recruit-choice"),
-    wantedBtn: document.getElementById("wanted-btn"),
-    wantedCount: document.getElementById("wanted-count"),
-    wantedPanel: document.getElementById("wanted-panel"),
-    wantedCloseBtn: document.getElementById("wanted-close-btn"),
-    wantedDate: document.getElementById("wanted-date"),
-    wantedList: document.getElementById("wanted-list"),
     cloudSaveBtn: document.getElementById("cloud-save-btn"),
     cloudSaveStatus: document.getElementById("cloud-save-status"),
     playerHp: document.getElementById("player-hp"),
@@ -143,12 +136,8 @@
 
   const EXTRA_ALLY_SPRITES = {
     lightning_otter: { image: new Image(), src: "assets/pixel-ally-lightning-otter-v1.png", crop: [18, 107, 366, 380] },
-    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v2.png", crop: [18, 124, 366, 380] },
+    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v1.png", crop: [18, 124, 366, 380] },
     herb_hedgehog: { image: new Image(), src: "assets/pixel-ally-herb-hedgehog-v1.png", crop: [18, 106, 366, 380] },
-    drummer: { image: new Image(), src: "assets/pixel-ally-march-drummer-v1.png", crop: [0, 0, 384, 384] },
-    iron_hare: { image: new Image(), src: "assets/pixel-ally-iron-hare-v1.png", crop: [0, 0, 384, 384] },
-    star_fox: { image: new Image(), src: "assets/pixel-ally-star-fox-v1.png", crop: [0, 0, 384, 384] },
-    bomb_furball: { image: new Image(), src: "assets/pixel-ally-bomb-fur-v1.png", crop: [0, 0, 384, 384] },
   };
   const EXTRA_ENEMY_SPRITES = {
     bloodwing_bat: { image: new Image(), src: "assets/pixel-enemy-bloodwing-bat-v2.png", crop: [18, 164, 366, 380] },
@@ -161,8 +150,6 @@
     sprite.image.addEventListener("load", () => {
       renderCardPortraits();
       renderDeckBuilder();
-      renderWantedBoard();
-      renderRecruitChoices();
     });
   }
   for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) sprite.image.src = sprite.src;
@@ -245,8 +232,6 @@
     allyPixels = allySheet;
     renderCardPortraits();
     renderDeckBuilder();
-    renderWantedBoard();
-    renderRecruitChoices();
   });
   unlockableSheet.addEventListener("load", () => {
     // The v4 atlas already has a transparent alpha channel. Reading its pixels
@@ -254,15 +239,11 @@
     unlockablePixels = unlockableSheet;
     renderCardPortraits();
     renderDeckBuilder();
-    renderWantedBoard();
-    renderRecruitChoices();
   });
   rockShieldSheet.addEventListener("load", () => {
     rockShieldPixels = rockShieldSheet;
     renderCardPortraits();
     renderDeckBuilder();
-    renderWantedBoard();
-    renderRecruitChoices();
   });
   enemySheet.addEventListener("load", () => {
     enemyPixels = enemySheet;
@@ -299,14 +280,14 @@
       id: "bomber", name: "폭죽술사", cost: 390, hp: 260, damage: 88,
       speed: 33, range: 185, cooldown: 1.85, size: 62, recharge: 10.2, kind: "bomber",
       projectile: true, splash: 118, unlockable: true, sprite: 4, shot: "#ff8a4a",
-      tint: "sepia(.45) hue-rotate(330deg) saturate(2.1) brightness(.98) contrast(1.08)", overlay: "rgba(255, 78, 42, .34)",
+      tint: "hue-rotate(-40deg) saturate(1.5) brightness(1.05)", overlay: "rgba(255, 120, 64, .28)",
       info: "넓은 폭발을 일으키는 화공 유닛",
     },
     {
       id: "sniper", name: "달그림자", cost: 520, hp: 170, damage: 210,
       speed: 26, range: 340, cooldown: 2.55, size: 56, recharge: 13.5, kind: "sniper",
       projectile: true, critChance: 0.22, critPower: 1.9, unlockable: true, sprite: 2, shot: "#d7e7ff",
-      tint: "grayscale(.75) sepia(.18) hue-rotate(165deg) saturate(1.25) contrast(1.22) brightness(.82)", overlay: "rgba(126, 166, 205, .28)",
+      tint: "grayscale(.15) contrast(1.2) brightness(.92)", overlay: "rgba(210, 220, 240, .22)",
       info: "아주 멀리서 한 발을 꽂는 저격수",
     },
     {
@@ -320,14 +301,14 @@
       id: "drummer", name: "진군북", cost: 280, hp: 580, damage: 52,
       speed: 38, range: 48, cooldown: 0.95, size: 66, recharge: 6.8, kind: "drummer",
       unlockable: true, sprite: 1, aura: 1.32,
-      tint: "sepia(.65) hue-rotate(72deg) saturate(1.9) brightness(.98) contrast(1.08)", overlay: "rgba(55, 198, 108, .34)",
+      tint: "hue-rotate(95deg) saturate(1.2) brightness(1.05)", overlay: "rgba(90, 210, 130, .26)",
       info: "북소리로 주변 아군 공격·공속·이동을 강화한다",
     },
     {
       id: "scout", name: "정찰냥", cost: 70, hp: 95, damage: 14,
       speed: 84, range: 34, cooldown: 0.48, size: 48, recharge: 1.6, kind: "scout",
       unlockable: true, sprite: 0,
-      tint: "sepia(.7) hue-rotate(145deg) saturate(1.7) brightness(1.03) contrast(1.08)", overlay: "rgba(76, 205, 190, .3)",
+      tint: "hue-rotate(40deg) saturate(1.1) brightness(1.15)", overlay: "rgba(255, 230, 120, .24)",
       info: "값싸고 빠른 정찰 돌격대",
     },
     {
@@ -408,52 +389,6 @@
       projectile: true, splash: 76, poison: 5, poisonDamage: 16, unlockable: true, shot: "#b77cff",
       info: "독 물약으로 범위 피해와 지속 피해를 준다",
     },
-    {
-      id: "wander_swordsman", name: "방랑검객", cost: 230, hp: 310, damage: 46,
-      speed: 68, range: 40, cooldown: 0.38, size: 54, recharge: 5.8, kind: "wanderer",
-      unlockable: true, sprite: 0, cleave: 30, role: "빠른 근접 연타",
-      tint: "sepia(.72) hue-rotate(305deg) saturate(1.85) brightness(.94) contrast(1.12)", overlay: "rgba(206, 74, 91, .34)",
-      info: "빠른 쌍검 연타로 전열의 빈틈을 파고든다",
-    },
-    {
-      id: "moon_shooter", name: "달빛 사수", cost: 470, hp: 210, damage: 148,
-      speed: 31, range: 335, cooldown: 1.75, size: 58, recharge: 11.8, kind: "moonshot",
-      projectile: true, critChance: 0.2, critPower: 2.05, unlockable: true, sprite: 2,
-      shot: "#bfeaff", role: "긴 사거리 정밀 사격",
-      tint: "sepia(.45) hue-rotate(155deg) saturate(1.65) brightness(1.08) contrast(1.08)", overlay: "rgba(91, 198, 255, .32)",
-      info: "달빛 화살로 먼 적을 정밀하게 저격한다",
-    },
-    {
-      id: "timid_mage", name: "겁쟁이 마법사", cost: 360, hp: 230, damage: 82,
-      speed: 27, range: 290, cooldown: 1.55, size: 65, recharge: 9.6, kind: "timid",
-      projectile: true, splash: 76, knockback: 26, slow: 1.4, unlockable: true, sprite: 4,
-      shot: "#c9a7ff", role: "밀쳐내는 달빛 마법",
-      tint: "grayscale(.18) sepia(.55) hue-rotate(132deg) saturate(1.65) brightness(1.08)", overlay: "rgba(115, 225, 218, .3)",
-      info: "겁은 많지만 적을 밀어내는 마법은 확실하다",
-    },
-    {
-      id: "iron_hare", name: "철갑토끼", cost: 430, hp: 1040, damage: 48,
-      speed: 24, range: 48, cooldown: 1.05, size: 70, recharge: 11.5, kind: "ironhare",
-      unlockable: true, sprite: 1, guard: true, cleave: 52, role: "느리지만 높은 체력",
-      tint: "grayscale(.92) sepia(.12) hue-rotate(185deg) saturate(1.35) contrast(1.38) brightness(.7)", overlay: "rgba(72, 91, 122, .4)",
-      info: "철갑 방패로 긴 시간 전선을 붙잡는다",
-    },
-    {
-      id: "star_fox", name: "별길여우", cost: 420, hp: 245, damage: 118,
-      speed: 46, range: 285, cooldown: 1.12, size: 57, recharge: 9.4, kind: "starfox",
-      projectile: true, critChance: 0.28, critPower: 1.85, unlockable: true, sprite: 2,
-      shot: "#ffe17b", role: "연속 치명타 사격",
-      tint: "sepia(.55) hue-rotate(265deg) saturate(2.05) brightness(1.02) contrast(1.1)", overlay: "rgba(222, 102, 218, .32)",
-      info: "별가루 화살로 치명타를 연이어 노린다",
-    },
-    {
-      id: "bomb_furball", name: "폭탄 털뭉치", cost: 350, hp: 290, damage: 96,
-      speed: 40, range: 175, cooldown: 1.45, size: 60, recharge: 8.8, kind: "bombfur",
-      projectile: true, splash: 142, knockback: 18, unlockable: true, sprite: 4,
-      shot: "#ffad66", role: "넓은 범위 폭발",
-      tint: "sepia(.62) hue-rotate(330deg) saturate(2.3) brightness(.88) contrast(1.15)", overlay: "rgba(202, 58, 35, .38)",
-      info: "짧은 사거리 대신 거대한 폭발로 무리를 쓸어낸다",
-    },
   ];
 
   const ENEMY_TYPES = {
@@ -476,11 +411,11 @@
       tint: "hue-rotate(200deg) saturate(1.15) brightness(.88)",
     },
     brute: {
-      id: "brute", name: "돌갑옷 대장", hp: 1080, damage: 92, speed: 25,
+      id: "brute", name: "돌갑옷 대장", hp: 860, damage: 84, speed: 25,
       range: 58, cooldown: 1.4, size: 84, reward: 145, kind: "brute", sprite: 2, cleave: 72,
     },
     shell: {
-      id: "shell", name: "등껍질 두꺼비", hp: 1560, damage: 58, speed: 16,
+      id: "shell", name: "등껍질 두꺼비", hp: 980, damage: 52, speed: 16,
       range: 52, cooldown: 1.7, size: 90, reward: 160, kind: "shell", sprite: 2,
       tint: "hue-rotate(80deg) saturate(.9) brightness(.85)",
     },
@@ -499,17 +434,17 @@
     shaman: {
       id: "shaman", name: "가시 주술사", hp: 690, damage: 32, speed: 24,
       range: 205, cooldown: 1.8, size: 70, reward: 110, kind: "shaman", sprite: 1,
-      projectile: true, heal: 105, shot: "#d483f0",
+      projectile: true, heal: 72, shot: "#d483f0",
       tint: "hue-rotate(245deg) saturate(1.2) brightness(.9)",
     },
     priest: {
-      id: "priest", name: "가시 사제", hp: 860, damage: 44, speed: 22,
+      id: "priest", name: "가시 사제", hp: 720, damage: 40, speed: 22,
       range: 220, cooldown: 1.65, size: 72, reward: 138, kind: "priest", sprite: 1,
-      projectile: true, heal: 160, shot: "#f0a0ff",
+      projectile: true, heal: 95, shot: "#f0a0ff",
       tint: "hue-rotate(270deg) saturate(1.35) brightness(.95)",
     },
     jugger: {
-      id: "jugger", name: "철갑 거인", hp: 2100, damage: 128, speed: 18,
+      id: "jugger", name: "철갑 거인", hp: 1320, damage: 108, speed: 18,
       range: 64, cooldown: 1.55, size: 98, reward: 220, kind: "jugger", sprite: 2, cleave: 96,
       tint: "hue-rotate(-20deg) saturate(.7) brightness(.75)",
     },
@@ -520,16 +455,16 @@
       tint: "hue-rotate(250deg) saturate(.6) brightness(1.25)",
     },
     boss: {
-      id: "boss", name: "가시왕", hp: 3900, damage: 155, speed: 17,
+      id: "boss", name: "가시왕", hp: 2400, damage: 132, speed: 17,
       range: 74, cooldown: 1.65, size: 112, reward: 600, kind: "boss", sprite: 3, cleave: 118, raid: true,
     },
     king: {
-      id: "king", name: "가시대왕", hp: 5600, damage: 188, speed: 16,
+      id: "king", name: "가시대왕", hp: 3100, damage: 158, speed: 16,
       range: 80, cooldown: 1.5, size: 122, reward: 820, kind: "king", sprite: 3, cleave: 140, raid: true,
       tint: "hue-rotate(-25deg) saturate(1.35) brightness(1.05)",
     },
     nightlord: {
-      id: "nightlord", name: "달그림자 군주", hp: 7200, damage: 210, speed: 19,
+      id: "nightlord", name: "달그림자 군주", hp: 3800, damage: 175, speed: 19,
       range: 86, cooldown: 1.42, size: 128, reward: 1100, kind: "nightlord", sprite: 3, cleave: 160, raid: true,
       tint: "hue-rotate(210deg) saturate(1.2) brightness(.78)",
     },
@@ -544,13 +479,13 @@
       projectile: true, shot: "#d6b9ff",
     },
     siege_rhino: {
-      id: "siege_rhino", name: "공성코뿔소", hp: 1950, damage: 104, speed: 20,
+      id: "siege_rhino", name: "공성코뿔소", hp: 1280, damage: 92, speed: 20,
       range: 60, cooldown: 1.48, size: 96, reward: 195, kind: "rhino", cleave: 88, siege: 2.05,
     },
     mooncap_witch: {
-      id: "mooncap_witch", name: "달버섯마녀", hp: 760, damage: 45, speed: 24,
+      id: "mooncap_witch", name: "달버섯마녀", hp: 620, damage: 45, speed: 24,
       range: 225, cooldown: 1.72, size: 70, reward: 126, kind: "witch",
-      projectile: true, heal: 135, slow: 1.6, shot: "#a8ef55",
+      projectile: true, heal: 80, slow: 1.6, shot: "#a8ef55",
     },
   };
 
@@ -590,62 +525,26 @@
     S("4-3", "고대 석주", "★★★★", 4600, 7200, 138, 26, 1.12, [["jugger", 0.25], ["wraith", 0.35], ["shaman", 0.4]], null, 1.9, 4),
     S("4-4", "메아리 협곡", "★★★★", 4700, 7600, 135, 27, 1.08, [["jugger", 0.35], ["toxic", 0.35], ["wolf", 0.3]], null, 1.96, 4),
     S("4-5", "폐허의 왕", "★★★★★", 4800, 8200, 132, 24, 1.04, [["jugger", 0.45], ["wraith", 0.3], ["priest", 0.25]], "jugger", 2.04, 4),
-    S("5-1", "공성 진지", "★★★★★", 4900, 8500, 130, 28, 1.08, [["brute", 0.3], ["spitter", 0.35], ["priest", 0.35]], null, 2.1, 4),
-    S("5-2", "외성 해자", "★★★★★", 5000, 9000, 128, 28, 1.02, [["shell", 0.35], ["toxic", 0.35], ["jugger", 0.3]], null, 2.16, 4),
-    S("5-3", "가시왕 외성", "★★★★★", 5100, 9500, 125, 30, 0.98, [["jugger", 0.4], ["priest", 0.3], ["wraith", 0.3]], null, 2.22, 4),
-    S("5-4", "성벽 아래", "★★★★★", 5200, 10000, 122, 30, 0.94, [["jugger", 0.45], ["toxic", 0.25], ["wolf", 0.3]], "brute", 2.28, 4),
-    S("5-5", "외성 성문", "★★★★★", 5400, 10800, 120, 26, 0.9, [["jugger", 0.5], ["priest", 0.5]], "boss", 2.36, 4),
-    S("6-1", "달빛 회랑", "★★★★★", 5500, 11200, 118, 30, 0.96, [["wraith", 0.45], ["priest", 0.3], ["toxic", 0.25]], null, 2.42, 4),
-    S("6-2", "유리 정원", "★★★★★", 5600, 11800, 116, 32, 0.92, [["wraith", 0.4], ["shaman", 0.3], ["jugger", 0.3]], null, 2.5, 4),
-    S("6-3", "침묵의 예배당", "★★★★★", 5700, 12400, 114, 32, 0.88, [["priest", 0.45], ["shell", 0.25], ["wraith", 0.3]], null, 2.58, 5),
-    S("6-4", "달그림자 탑", "★★★★★", 5800, 13000, 112, 33, 0.86, [["wraith", 0.35], ["toxic", 0.3], ["jugger", 0.35]], "priest", 2.66, 5),
-    S("6-5", "달의 알현실", "★★★★★", 6000, 14000, 110, 28, 0.82, [["wraith", 0.4], ["priest", 0.35], ["jugger", 0.25]], "king", 2.76, 5),
-    S("7-1", "내부 성곽", "★★★★★", 6100, 14500, 108, 34, 0.86, [["jugger", 0.4], ["wolf", 0.3], ["toxic", 0.3]], null, 2.84, 5),
-    S("7-2", "왕실 무기고", "★★★★★", 6200, 15200, 106, 34, 0.82, [["jugger", 0.45], ["priest", 0.35], ["shell", 0.2]], null, 2.92, 5),
-    S("7-3", "피의 연회장", "★★★★★", 6300, 16000, 104, 36, 0.8, [["wraith", 0.4], ["wolf", 0.3], ["jugger", 0.3]], null, 3.02, 5),
-    S("7-4", "왕좌의 복도", "★★★★★", 6400, 16800, 102, 36, 0.76, [["jugger", 0.4], ["priest", 0.35], ["wraith", 0.25]], "jugger", 3.12, 5),
-    S("7-5", "가시왕 성문", "★★★★★", 6600, 18000, 100, 30, 0.72, [["jugger", 0.4], ["priest", 0.4], ["toxic", 0.2]], "king", 3.22, 5),
-    S("8-1", "옥좌 앞뜰", "★★★★★", 6800, 18800, 98, 36, 0.78, [["wraith", 0.35], ["jugger", 0.35], ["priest", 0.3]], null, 3.32, 5),
-    S("8-2", "검은 알현실", "★★★★★", 7000, 19800, 96, 38, 0.74, [["jugger", 0.45], ["wraith", 0.35], ["priest", 0.2]], null, 3.42, 5),
-    S("8-3", "달의 심연", "★★★★★", 7200, 21000, 94, 38, 0.7, [["priest", 0.4], ["toxic", 0.25], ["wraith", 0.35]], null, 3.54, 5),
-    S("8-4", "마지막 보루", "★★★★★", 7400, 22500, 92, 40, 0.66, [["jugger", 0.4], ["priest", 0.3], ["wraith", 0.3]], "king", 3.68, 5),
-    S("8-5", "가시왕 옥좌", "★★★★★", 7800, 25000, 90, 32, 0.6, [["jugger", 0.35], ["priest", 0.35], ["wraith", 0.3]], "nightlord", 3.85, 5),
-  ];
-
-  const WANTED_MISSIONS = [
-    {
-      unitId: "wander_swordsman", stageId: "2-4", tag: "검의 맹세",
-      condition: "근접 대원만 출격시켜 클리어",
-      test: () => state.deployedUnitIds.length > 0 && state.deployedUnitIds.every((id) => {
-        const unit = UNIT_TYPES.find((entry) => entry.id === id);
-        return unit && !unit.projectile && unit.range <= 90;
-      }),
-    },
-    {
-      unitId: "moon_shooter", stageId: "3-2", tag: "흔들리지 않는 성벽",
-      condition: "성채 HP 70% 이상으로 승리",
-      test: () => state.playerHp >= state.playerMaxHp * 0.7,
-    },
-    {
-      unitId: "timid_mage", stageId: "3-5", tag: "달빛 아래 용기",
-      condition: "보스전에서 달빛 지휘를 2회 사용",
-      test: () => state.commandUses >= 2,
-    },
-    {
-      unitId: "iron_hare", stageId: "2-5", tag: "철벽 전선",
-      condition: "방어형 대원을 3회 이상 출격",
-      test: () => state.tankDeployments >= 3,
-    },
-    {
-      unitId: "star_fox", stageId: "4-2", tag: "별보다 빠르게",
-      condition: "90초 안에 스테이지 클리어",
-      test: () => state.battleTime <= 90,
-    },
-    {
-      unitId: "bomb_furball", stageId: "4-4", tag: "폭발적인 소문",
-      condition: "최고 10 콤보 이상으로 승리",
-      test: () => state.bestCombo >= 10,
-    },
+    S("5-1", "공성 진지", "★★★★★", 5200, 6200, 200, 22, 1.28, [["brute", 0.34], ["spitter", 0.38], ["priest", 0.28]], null, 1.58, 4),
+    S("5-2", "외성 해자", "★★★★★", 5300, 6500, 205, 22, 1.24, [["shell", 0.34], ["toxic", 0.38], ["jugger", 0.28]], null, 1.62, 4),
+    S("5-3", "가시왕 외성", "★★★★★", 5400, 6800, 210, 23, 1.2, [["jugger", 0.34], ["priest", 0.3], ["wraith", 0.36]], null, 1.66, 4),
+    S("5-4", "성벽 아래", "★★★★★", 5500, 7100, 215, 23, 1.16, [["jugger", 0.36], ["toxic", 0.28], ["wolf", 0.36]], "brute", 1.7, 4),
+    S("5-5", "외성 성문", "★★★★★", 5700, 7600, 220, 21, 1.12, [["jugger", 0.42], ["priest", 0.38], ["wraith", 0.2]], "boss", 1.76, 4),
+    S("6-1", "달빛 회랑", "★★★★★", 5800, 7900, 225, 24, 1.18, [["wraith", 0.45], ["priest", 0.28], ["toxic", 0.27]], null, 1.8, 4),
+    S("6-2", "유리 정원", "★★★★★", 5900, 8200, 230, 24, 1.14, [["wraith", 0.4], ["shaman", 0.3], ["jugger", 0.3]], null, 1.84, 4),
+    S("6-3", "침묵의 예배당", "★★★★★", 6000, 8600, 235, 25, 1.1, [["priest", 0.4], ["shell", 0.25], ["wraith", 0.35]], null, 1.88, 4),
+    S("6-4", "달그림자 탑", "★★★★★", 6100, 9000, 240, 25, 1.08, [["wraith", 0.38], ["toxic", 0.3], ["jugger", 0.32]], "priest", 1.92, 4),
+    S("6-5", "달의 알현실", "★★★★★", 6300, 9600, 245, 23, 1.04, [["wraith", 0.4], ["priest", 0.35], ["jugger", 0.25]], "king", 1.98, 4),
+    S("7-1", "내부 성곽", "★★★★★", 6400, 9900, 250, 26, 1.08, [["jugger", 0.34], ["wolf", 0.36], ["toxic", 0.3]], null, 2.02, 4),
+    S("7-2", "왕실 무기고", "★★★★★", 6500, 10300, 255, 26, 1.04, [["jugger", 0.38], ["priest", 0.32], ["shell", 0.3]], null, 2.06, 4),
+    S("7-3", "피의 연회장", "★★★★★", 6600, 10700, 260, 27, 1.02, [["wraith", 0.42], ["wolf", 0.3], ["jugger", 0.28]], null, 2.1, 4),
+    S("7-4", "왕좌의 복도", "★★★★★", 6700, 11100, 265, 27, 1.0, [["jugger", 0.36], ["priest", 0.32], ["wraith", 0.32]], "jugger", 2.14, 4),
+    S("7-5", "가시왕 성문", "★★★★★", 6900, 11800, 270, 24, 0.96, [["jugger", 0.36], ["priest", 0.36], ["toxic", 0.28]], "king", 2.18, 4),
+    S("8-1", "옥좌 앞뜰", "★★★★★", 7100, 12200, 275, 27, 1.0, [["wraith", 0.38], ["jugger", 0.32], ["priest", 0.3]], null, 2.22, 4),
+    S("8-2", "검은 알현실", "★★★★★", 7300, 12600, 280, 28, 0.98, [["jugger", 0.38], ["wraith", 0.36], ["priest", 0.26]], null, 2.26, 4),
+    S("8-3", "달의 심연", "★★★★★", 7500, 13000, 285, 28, 0.96, [["priest", 0.36], ["toxic", 0.28], ["wraith", 0.36]], null, 2.3, 4),
+    S("8-4", "마지막 보루", "★★★★★", 7700, 13600, 290, 29, 0.94, [["jugger", 0.36], ["priest", 0.3], ["wraith", 0.34]], "king", 2.36, 4),
+    S("8-5", "가시왕 옥좌", "★★★★★", 8000, 14500, 300, 26, 0.9, [["jugger", 0.32], ["priest", 0.34], ["wraith", 0.34]], "nightlord", 2.42, 4),
   ];
 
   const SAVE_KEY = "fur-front-unlock";
@@ -687,10 +586,6 @@
         levels,
         duplicates: saved.duplicates && typeof saved.duplicates === "object" ? saved.duplicates : {},
         claimedStages: Array.isArray(saved.claimedStages) ? saved.claimedStages : [],
-        wantedClaims: Array.isArray(saved.wantedClaims) ? saved.wantedClaims : [],
-        pendingRecruitChoices: Array.isArray(saved.pendingRecruitChoices)
-          ? saved.pendingRecruitChoices.filter((id) => UNIT_TYPES.some((unit) => unit.id === id)).slice(0, 3)
-          : [],
       };
   }
 
@@ -727,39 +622,6 @@
 
   function ownsUnit(id) {
     return state.profile.units.includes(id);
-  }
-
-  function grantUnit(id) {
-    const unit = UNIT_TYPES.find((entry) => entry.id === id);
-    if (!unit || ownsUnit(id)) return null;
-    state.profile.units.push(id);
-    state.profile.levels[id] = 1;
-    if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(id);
-    return unit;
-  }
-
-  function localDayKey() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-
-  function hashText(text) {
-    let hash = 2166136261;
-    for (let i = 0; i < text.length; i++) {
-      hash ^= text.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-    return hash >>> 0;
-  }
-
-  function dailyWantedMissions() {
-    const day = localDayKey();
-    return [...WANTED_MISSIONS]
-      .sort((a, b) => hashText(`${day}:${a.unitId}`) - hashText(`${day}:${b.unitId}`))
-      .slice(0, 3);
   }
 
   function unitLevel(id) {
@@ -826,15 +688,14 @@
 
   const INITIAL_PREP_TIME = 8;
 
-  function buildWaveQueues(stage) {
-    const waveTotal = Math.max(1, stage.waves || 3);
+  function buildEndlessWave(stage, waveNumber) {
+    const baseCount = Math.max(3, Math.ceil(stage.count / (stage.waves || 3)));
+    const count = Math.min(baseCount + Math.floor((waveNumber - 1) / 2), baseCount + 8);
     const pool = stageEnemyPool(stage);
-    const queues = Array.from({ length: waveTotal }, () => []);
-    for (let i = 0; i < stage.count; i++) {
-      queues[Math.min(waveTotal - 1, Math.floor(i * waveTotal / stage.count))].push(pickFromPool(pool));
-    }
-    if (stage.boss) queues[waveTotal - 1].push(stage.boss);
-    return queues;
+    const queue = [];
+    for (let i = 0; i < count; i++) queue.push(pickFromPool(pool));
+    if (stage.boss && waveNumber % 5 === 0) queue.push(stage.boss);
+    return queue;
   }
 
   const state = {
@@ -884,9 +745,6 @@
     bestCombo: 0,
     dangerLevel: 0,
     castleHint: false,
-    deployedUnitIds: [],
-    commandUses: 0,
-    tankDeployments: 0,
     profile: loadProfile(),
   };
 
@@ -942,12 +800,9 @@
     const uid = state.nextId++;
     const lane = type.raid || type.kind === "boss" ? 0 : ((uid + (team === "ally" ? 0 : 1)) % 3) - 1;
     const level = team === "ally" ? unitLevel(type.id) : 1;
-    const damagePower = 1 + (level - 1) * 0.12;
-    const hpPower = 1 + (level - 1) * 0.16;
-    const supportPower = 1 + (level - 1) * 0.12;
-    const vitality = type.guard || type.kind === "titan" || type.kind === "ironhare" ? 1.55 : 1.3;
-    const attackTempo = 1 - Math.min(0.135, (level - 1) * 0.015);
-    const maxHp = Math.round(type.hp * hpPower * vitality);
+    const statPower = 1 + (level - 1) * 0.18;
+    const supportPower = 1 + (level - 1) * 0.15;
+    const maxHp = Math.round(type.hp * statPower);
     return {
       ...type,
       uid,
@@ -959,10 +814,10 @@
       lane,
       hp: maxHp,
       maxHp,
-      damage: Math.round(type.damage * damagePower),
+      damage: Math.round(type.damage * statPower),
       heal: type.heal ? Math.round(type.heal * supportPower) : type.heal,
-      aura: type.aura ? 1 + (type.aura - 1) * supportPower : type.aura,
-      cooldown: type.cooldown * attackTempo,
+      aura: type.aura ? type.aura + (level - 1) * 0.04 : type.aura,
+      recharge: type.recharge * (1 - (level - 1) * 0.028),
       size: Math.round(type.size * VIEW_SCALE * FIGHTER_SCALE),
       range: type.range * VIEW_SCALE,
       speed: type.speed * VIEW_SCALE,
@@ -993,10 +848,7 @@
     const type = UNIT_TYPES[index];
     if (!type || !ownsUnit(type.id) || state.money < type.cost || state.cooldowns[type.id] > 0) return;
     state.money -= type.cost;
-    const rechargeBoost = 1 - Math.min(0.18, (unitLevel(type.id) - 1) * 0.02);
-    state.cooldowns[type.id] = type.recharge * rechargeBoost;
-    state.deployedUnitIds.push(type.id);
-    if (type.guard || type.kind === "titan" || type.kind === "ironhare") state.tankDeployments += 1;
+    state.cooldowns[type.id] = type.recharge;
     const unit = makeFighter(type, "ally");
     state.units.push(unit);
     burst(BATTLE_START, unit.y - 18, "#8fdcf0", 16, 110);
@@ -1009,12 +861,14 @@
   function spawnEnemy(kind) {
     const base = ENEMY_TYPES[kind];
     const scale = currentStage().scale;
-    const pressure = 1 + state.dangerLevel * (state.stageIndex < 10 ? 0.06 : 0.1);
+    const hpScale = scale <= 1.55 ? scale : 1.55 + (scale - 1.55) * 0.32;
+    const dmgScale = 1 + Math.max(0, scale - 1) * 0.12;
+    const pressure = 1 + state.dangerLevel * 0.04;
     const type = {
       ...base,
-      hp: Math.round(base.hp * scale * pressure),
-      damage: Math.round(base.damage * (1.02 + scale * 0.28) * pressure),
-      speed: base.speed * (1 + state.dangerLevel * (state.stageIndex < 10 ? 0.025 : 0.055)),
+      hp: Math.round(base.hp * hpScale * pressure),
+      damage: Math.round(base.damage * dmgScale * pressure),
+      speed: base.speed * (1 + state.dangerLevel * 0.03),
     };
     const enemy = makeFighter(type, "enemy");
     enemy.hp = type.hp;
@@ -1029,26 +883,24 @@
   }
 
   function updateSpawning(dt) {
-    if (state.waveWaiting) {
+    if (!state.spawnQueue.length) {
+      if (!state.waveWaiting) {
+        state.waveWaiting = true;
+        const earlyRest = state.stageIndex < 10 ? 2.2 : (state.stageIndex < 20 ? 1 : 0);
+        state.waveBreak = Math.max(3.2, 4.2 + earlyRest - state.stageIndex * 0.045);
+        const supply = 55 + state.waveIndex * 20;
+        state.money = Math.min(state.maxMoney, state.money + supply);
+        showMessage(`다음 공세 접근 · 긴급 보급 +${supply}G`, 1.8);
+        sound("upgrade");
+      }
       state.waveBreak -= dt;
       if (state.waveBreak <= 0) {
         state.waveWaiting = false;
         state.waveIndex += 1;
-        state.spawnQueue = state.waveQueues.shift() || [];
+        state.spawnQueue = buildEndlessWave(currentStage(), state.waveIndex);
         state.spawnTimer = 0.45;
         showMessage(`WAVE ${state.waveIndex} 시작!`, 1.6);
       }
-      return;
-    }
-    if (!state.spawnQueue.length) {
-      if (!state.waveQueues.length) return;
-      state.waveWaiting = true;
-      const earlyRest = state.stageIndex < 10 ? 2.2 : (state.stageIndex < 20 ? 1 : 0);
-      state.waveBreak = Math.max(3.2, 4.2 + earlyRest - state.stageIndex * 0.045);
-      const supply = 55 + state.waveIndex * 20;
-      state.money = Math.min(state.maxMoney, state.money + supply);
-      showMessage(`다음 공세 접근 · 긴급 보급 +${supply}G`, 1.8);
-      sound("upgrade");
       return;
     }
     state.spawnTimer -= dt;
@@ -1096,7 +948,6 @@
     if (state.mode !== "playing" || state.paused || state.command < state.commandMax) return;
     state.command = 0;
     state.commandBuff = 8;
-    state.commandUses += 1;
     state.playerHp = Math.min(state.playerMaxHp, state.playerHp + 260);
     for (const unit of state.units) {
       if (unit.dead) continue;
@@ -1622,14 +1473,7 @@
       state.profile.gold += clearGold;
       state.profile.materials += clearMaterials;
       progressionReward = `<br />보급 골드 <b>${clearGold}G</b> · 강화석 <b>${clearMaterials}개</b>`;
-      const wantedRecruits = evaluateWantedRewards(stage);
-      if (wantedRecruits.length) {
-        progressionReward += `<br /><b>수배 대원 영입: ${wantedRecruits.map((unit) => unit.name).join(", ")}</b>`;
-      }
       saveProfile();
-      buildCards();
-      renderDeckBuilder();
-      renderWantedBoard();
     }
     ui.overlayTitle.textContent = win
       ? (hasNext ? `${stage.id} 클리어!` : "전선 완전 돌파!")
@@ -1652,8 +1496,6 @@
 
   function reset() {
     const stage = currentStage();
-    const waveQueues = buildWaveQueues(stage);
-    const totalEnemies = waveQueues.reduce((sum, queue) => sum + queue.length, 0);
     Object.assign(state, {
       mode: "playing",
       paused: false,
@@ -1678,12 +1520,12 @@
       spawnTimer: 0,
       spawnIndex: 0,
       spawnQueue: [],
-      waveQueues,
+      waveQueues: [],
       waveIndex: 0,
-      waveTotal: waveQueues.length,
+      waveTotal: 0,
       waveBreak: INITIAL_PREP_TIME,
       waveWaiting: true,
-      totalEnemies,
+      totalEnemies: Infinity,
       spawnedCount: 0,
       kills: 0,
       combo: 0,
@@ -1691,9 +1533,6 @@
       bestCombo: 0,
       dangerLevel: 0,
       bossSpawned: false,
-      deployedUnitIds: [],
-      commandUses: 0,
-      tankDeployments: 0,
       shake: 0,
       flash: 0,
       messageTimer: 0,
@@ -1752,12 +1591,10 @@
     const stage = currentStage();
     ui.stageLabel.textContent = stage.id;
     ui.stageName.textContent = stage.name;
-    ui.stageProgress.textContent = `처치 ${Math.min(state.kills, state.totalEnemies)} / ${state.totalEnemies}`;
+    ui.stageProgress.textContent = `처치 ${state.kills} · 무한 증원`;
     ui.waveLabel.textContent = (state.waveWaiting
       ? `${state.waveIndex === 0 ? "준비" : "보급"} ${Math.max(0, Math.ceil(state.waveBreak))}초`
-      : (state.waveIndex >= state.waveTotal && !state.spawnQueue.length
-        ? "마지막 공세 종료"
-        : `WAVE ${state.waveIndex} / ${state.waveTotal}`)) + (state.dangerLevel ? ` · 위협 ${"▲".repeat(state.dangerLevel)}` : "");
+      : `WAVE ${state.waveIndex} · 무한`) + (state.dangerLevel ? ` · 위협 ${"▲".repeat(state.dangerLevel)}` : "");
     ui.workerLevel.textContent = `Lv.${state.worker}`;
     ui.workerCost.textContent = state.worker >= 8 ? "MAX" : `${workerCost()} G`;
     ui.workerBtn.disabled = state.worker >= 8 || state.money < workerCost() || state.mode !== "playing";
@@ -1845,13 +1682,11 @@
       const scale = Math.min((card.width - 16) / sourceW, (card.height - 4) / sourceH);
       const drawW = Math.round(sourceW * scale);
       const drawH = Math.round(sourceH * scale);
-      if (type.tint && !source.unique) cardCtx.filter = type.tint;
       cardCtx.drawImage(
         source.sheet,
         x1, y1, sourceW, sourceH,
         Math.round((card.width - drawW) / 2), card.height - drawH, drawW, drawH
       );
-      cardCtx.filter = "none";
       if (type.overlay && !source.unique) {
         cardCtx.globalCompositeOperation = "source-atop";
         cardCtx.fillStyle = type.overlay;
@@ -1887,7 +1722,7 @@
         <strong>${type.name}</strong>
         <small>${type.cost} G · ${type.info}</small>
         <div class="deck-upgrade-row">
-          <span>${level >= 10 ? "최대 강화" : `공격 +${(level - 1) * 12}% · 체력 +${(level - 1) * 16}%`}</span>
+          <span>${level >= 10 ? "최대 강화" : `능력치 +${(level - 1) * 18}%`}</span>
           <button class="unit-upgrade-btn" type="button" ${level >= 10 ? "disabled" : ""}>
             ${level >= 10 ? "MAX" : `${cost.gold}G · ◆${cost.materials}`}
           </button>
@@ -1961,7 +1796,6 @@
     ui.howPanel.classList.add("hidden");
     ui.chestPanel.classList.add("hidden");
     ui.deckPanel.classList.add("hidden");
-    ui.wantedPanel.classList.add("hidden");
     ui.titleScreen.classList.add("hidden");
     requestAnimationFrame(() => {
       layoutBattle();
@@ -1982,146 +1816,44 @@
     renderDeckBuilder();
   }
 
-  function renderWantedBoard() {
-    if (!ui.wantedList) return;
-    const missions = dailyWantedMissions();
-    ui.wantedList.innerHTML = "";
-    ui.wantedDate.textContent = `${localDayKey()} · 자정에 수배 명단 교체`;
-    const availableCount = missions.filter((mission) => !ownsUnit(mission.unitId)).length;
-    ui.wantedCount.textContent = availableCount;
-
-    missions.forEach((mission, index) => {
-      const unit = UNIT_TYPES.find((entry) => entry.id === mission.unitId);
-      if (!unit) return;
-      const owned = ownsUnit(unit.id);
-      const stageIndex = STAGES.findIndex((entry) => entry.id === mission.stageId);
-      const stageLocked = stageIndex > state.unlocked;
-      const card = document.createElement("article");
-      card.className = `wanted-card${owned ? " claimed" : ""}${stageLocked ? " locked" : ""}`;
-      card.innerHTML = `
-        <span class="wanted-rank">WANTED 0${index + 1}</span>
-        <canvas class="wanted-portrait" width="150" height="128" aria-hidden="true"></canvas>
-        <div class="wanted-copy">
-          <small>${owned ? "영입 완료" : mission.tag}</small>
-          <h3>${owned ? unit.name : `??? · ${unit.name}`}</h3>
-          <p><b>STAGE ${mission.stageId}</b><br />${mission.condition}</p>
-          <em>${owned ? "보유 대원" : (stageLocked ? "스테이지 잠김" : "조건 달성 시 즉시 영입")}</em>
-        </div>`;
-      ui.wantedList.appendChild(card);
-      drawUnitPortrait(card.querySelector("canvas"), unit);
-    });
-  }
-
-  function evaluateWantedRewards(stage) {
-    const recruited = [];
-    for (const mission of dailyWantedMissions()) {
-      if (mission.stageId !== stage.id || ownsUnit(mission.unitId) || !mission.test()) continue;
-      const unit = grantUnit(mission.unitId);
-      if (!unit) continue;
-      state.profile.wantedClaims.push(`${localDayKey()}:${mission.unitId}`);
-      recruited.push(unit);
-    }
-    return recruited;
-  }
-
   function updateCollectionUI() {
     const locked = UNIT_TYPES.filter((unit) => unit.unlockable && !ownsUnit(unit.id));
-    const hasPendingRecruit = state.profile.pendingRecruitChoices.length > 0;
     ui.chestCount.textContent = state.profile.chests;
     ui.collectionCount.textContent = `${state.profile.units.length} / ${UNIT_TYPES.length} 보유`;
     ui.deckSummary.textContent = `${state.profile.deck.length} / ${MAX_DECK_SIZE}`;
     ui.profileGold.textContent = state.profile.gold;
     ui.materialCount.textContent = state.profile.materials;
-    ui.chestOpenBtn.disabled = state.profile.chests <= 0 || hasPendingRecruit;
-    ui.chestOpenBtn.textContent = hasPendingRecruit ? "대원 선택 중" : (state.profile.chests > 0 ? "상자 열기" : "상자 없음");
-    if (hasPendingRecruit) {
-      renderRecruitChoices();
-    } else {
-      ui.recruitChoice.classList.add("hidden");
-      ui.recruitChoice.innerHTML = "";
-      ui.chestDesc.innerHTML = state.profile.chests <= 0
-        ? "전투에서 이기면 상자를 얻습니다.<br />첫 클리어와 보스전은 상자를 더 줍니다."
-        : `상자 ${state.profile.chests}개 · 미보유 대원 ${locked.length}명<br />캐릭터 중복 시 <b>강화석 8개 + 보급 골드 180G</b>로 자동 전환됩니다.`;
-    }
-    renderWantedBoard();
-  }
-
-  function buildRecruitChoices() {
-    const pool = UNIT_TYPES.filter((unit) => unit.unlockable);
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    return pool.slice(0, 3).map((unit) => unit.id);
-  }
-
-  function renderRecruitChoices() {
-    if (!ui.recruitChoice) return;
-    const ids = state.profile.pendingRecruitChoices;
-    if (!ids.length) {
-      ui.recruitChoice.classList.add("hidden");
-      ui.recruitChoice.innerHTML = "";
-      return;
-    }
-    ui.recruitChoice.classList.remove("hidden");
-    ui.recruitChoice.innerHTML = `
-      <div class="recruit-heading">
-        <strong>달빛이 세 명의 대원을 인도했습니다.</strong>
-        <small>실루엣 하나를 선택해 영입하세요. 나머지 둘은 떠납니다.</small>
-      </div>
-      <div class="recruit-grid"></div>`;
-    const grid = ui.recruitChoice.querySelector(".recruit-grid");
-    ids.forEach((id, index) => {
-      const unit = UNIT_TYPES.find((entry) => entry.id === id);
-      if (!unit) return;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "recruit-card";
-      button.innerHTML = `
-        <span>후보 ${"ABC"[index]}</span>
-        <canvas width="128" height="118" aria-hidden="true"></canvas>
-        <strong>${unit.role || unit.info}</strong>
-        <small>${ownsUnit(unit.id) ? "이미 만난 듯한 기척" : "새로운 기척"}</small>`;
-      button.addEventListener("click", () => chooseRecruit(unit.id));
-      grid.appendChild(button);
-      drawUnitPortrait(button.querySelector("canvas"), unit);
-    });
-  }
-
-  function chooseRecruit(id) {
-    if (!state.profile.pendingRecruitChoices.includes(id)) return;
-    const unit = UNIT_TYPES.find((entry) => entry.id === id);
-    if (!unit) return;
-    let resultText = "";
-    if (ownsUnit(id)) {
-      state.profile.duplicates[id] = (Number(state.profile.duplicates[id]) || 0) + 1;
-      state.profile.materials += 8;
-      state.profile.gold += 180;
-      resultText = `<b>${unit.name} 중복!</b><br />강화석 8개와 보급 골드 180G로 전환했습니다.`;
-    } else {
-      grantUnit(id);
-      resultText = `<b>${unit.name}</b> 영입 완료!<br />${unit.info}`;
-    }
-    state.profile.pendingRecruitChoices = [];
-    saveProfile();
-    sound("win");
-    buildCards();
-    renderDeckBuilder();
-    updateCollectionUI();
-    ui.chestDesc.innerHTML = resultText;
+    ui.chestOpenBtn.disabled = state.profile.chests <= 0;
+    ui.chestOpenBtn.textContent = state.profile.chests > 0 ? "상자 열기" : "상자 없음";
+    ui.chestDesc.innerHTML = state.profile.chests <= 0
+      ? "전투에서 이기면 상자를 얻습니다.<br />첫 클리어와 보스전은 상자를 더 줍니다."
+      : `상자 ${state.profile.chests}개 · 미보유 대원 ${locked.length}명<br />캐릭터 중복 시 <b>강화석 8개 + 보급 골드 180G</b>로 자동 전환됩니다.`;
   }
 
   function openChest() {
-    if (state.profile.chests <= 0 || state.profile.pendingRecruitChoices.length) return;
+    if (state.profile.chests <= 0) return;
     state.profile.chests -= 1;
     const roll = Math.random();
     let resultText = "";
     let rewardColor = "#d58cff";
 
     if (roll < 0.55) {
-      state.profile.pendingRecruitChoices = buildRecruitChoices();
-      resultText = "<b>특수 영입 신호!</b><br />세 실루엣 중 함께할 대원 한 명을 선택하세요.";
-      rewardColor = "#d58cff";
+      const pool = UNIT_TYPES.filter((unit) => unit.unlockable);
+      const locked = pool.filter((unit) => !ownsUnit(unit.id));
+      const pickFrom = locked.length ? locked : pool;
+      const unit = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+      rewardColor = unit.shot || unit.overlay || "#d58cff";
+      if (ownsUnit(unit.id)) {
+        state.profile.duplicates[unit.id] = (Number(state.profile.duplicates[unit.id]) || 0) + 1;
+        state.profile.materials += 8;
+        state.profile.gold += 180;
+        resultText = `<b>${unit.name} 중복!</b><br />강화석 8개와 보급 골드 180G로 전환했습니다.`;
+      } else {
+        state.profile.units.push(unit.id);
+        state.profile.levels[unit.id] = 1;
+        if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(unit.id);
+        resultText = `<b>${unit.name}</b> 신규 영입!<br />${unit.info}`;
+      }
     } else if (roll < 0.80) {
       const amount = 5 + Math.floor(Math.random() * 6);
       state.profile.materials += amount;
@@ -2203,14 +1935,12 @@
   ui.howBtn.addEventListener("click", () => {
     ui.chestPanel.classList.add("hidden");
     ui.deckPanel.classList.add("hidden");
-    ui.wantedPanel.classList.add("hidden");
     ui.howPanel.classList.remove("hidden");
   });
   ui.howCloseBtn.addEventListener("click", () => ui.howPanel.classList.add("hidden"));
   ui.deckBtn.addEventListener("click", () => {
     ui.howPanel.classList.add("hidden");
     ui.chestPanel.classList.add("hidden");
-    ui.wantedPanel.classList.add("hidden");
     renderDeckBuilder();
     ui.deckPanel.classList.remove("hidden");
   });
@@ -2219,18 +1949,9 @@
   ui.chestBtn.addEventListener("click", () => {
     ui.howPanel.classList.add("hidden");
     ui.deckPanel.classList.add("hidden");
-    ui.wantedPanel.classList.add("hidden");
     ui.chestPanel.classList.remove("hidden");
     updateCollectionUI();
   });
-  ui.wantedBtn.addEventListener("click", () => {
-    ui.howPanel.classList.add("hidden");
-    ui.deckPanel.classList.add("hidden");
-    ui.chestPanel.classList.add("hidden");
-    renderWantedBoard();
-    ui.wantedPanel.classList.remove("hidden");
-  });
-  ui.wantedCloseBtn.addEventListener("click", () => ui.wantedPanel.classList.add("hidden"));
   ui.chestCloseBtn.addEventListener("click", () => ui.chestPanel.classList.add("hidden"));
   ui.chestOpenBtn.addEventListener("click", openChest);
   ui.overlayBtn.addEventListener("click", handleOverlayAction);
@@ -2253,7 +1974,6 @@
         ui.howPanel.classList.add("hidden");
         ui.chestPanel.classList.add("hidden");
         ui.deckPanel.classList.add("hidden");
-        ui.wantedPanel.classList.add("hidden");
       }
       return;
     }
