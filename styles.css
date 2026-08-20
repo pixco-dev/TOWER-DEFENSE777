@@ -459,6 +459,17 @@ button { font: inherit; }
   gap: 4px;
 }
 
+.convert-btn {
+  padding: 5px 6px;
+  border: 2px solid #3d4d3a;
+  background: #152418;
+  color: #b7e8b0;
+  cursor: pointer;
+  font: 800 9px monospace;
+}
+
+.convert-btn:hover { border-color: #7dce74; color: #e7ffe4; }
+
 .upgrade-wallet span {
   padding: 5px 6px;
   border: 2px solid #303850;

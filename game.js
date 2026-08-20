@@ -58,6 +58,8 @@
     deckSummary: document.getElementById("deck-summary"),
     profileGold: document.getElementById("profile-gold"),
     materialCount: document.getElementById("material-count"),
+    convertStoneBtn: document.getElementById("convert-stone-btn"),
+    convertGoldBtn: document.getElementById("convert-gold-btn"),
     chestBtn: document.getElementById("chest-btn"),
     chestPanel: document.getElementById("chest-panel"),
     chestCloseBtn: document.getElementById("chest-close-btn"),
@@ -551,6 +553,11 @@
   const PROFILE_KEY = "fur-front-profile-v2";
   const LOCAL_UPDATED_KEY = "fur-front-local-updated-v1";
   const MAX_DECK_SIZE = 10;
+  const MAX_UNIT_LEVEL = 20;
+  const ALLY_POWER = 1.14;
+  const ALLY_RECHARGE = 0.8;
+  const STONE_SELL_GOLD = 50;
+  const STONE_BUY_GOLD = 70;
   const STARTER_UNITS = UNIT_TYPES.filter((unit) => !unit.unlockable).map((unit) => unit.id);
   const LEGACY_UNIT_MIGRATIONS = {
     healer: "moon_cleric",
@@ -575,7 +582,7 @@
       const savedLevels = saved.levels && typeof saved.levels === "object" ? saved.levels : {};
       const levels = Object.fromEntries(units.map((id) => [
         id,
-        Math.max(1, Math.min(10, Math.floor(Number(savedLevels[id]) || 1))),
+        Math.max(1, Math.min(MAX_UNIT_LEVEL, Math.floor(Number(savedLevels[id]) || 1))),
       ]));
       return {
         chests: Math.max(0, Number(saved.chests) || 0),
@@ -625,7 +632,12 @@
   }
 
   function unitLevel(id) {
-    return Math.max(1, Math.min(10, Number(state.profile.levels[id]) || 1));
+    return Math.max(1, Math.min(MAX_UNIT_LEVEL, Number(state.profile.levels[id]) || 1));
+  }
+
+  function summonRecharge(type) {
+    const level = unitLevel(type.id);
+    return type.recharge * ALLY_RECHARGE * Math.max(0.42, 1 - (level - 1) * 0.02);
   }
 
   function upgradeCost(id) {
@@ -686,16 +698,20 @@
     return [...stage.pool, ...reinforcements];
   }
 
-  const INITIAL_PREP_TIME = 8;
-
-  function buildEndlessWave(stage, waveNumber) {
-    const baseCount = Math.max(3, Math.ceil(stage.count / (stage.waves || 3)));
-    const count = Math.min(baseCount + Math.floor((waveNumber - 1) / 2), baseCount + 8);
+  function buildWaveQueues(stage) {
+    const waveCount = stage.waves || 3;
+    const baseCount = Math.floor(stage.count / waveCount);
+    let remainder = stage.count % waveCount;
+    const waves = [];
     const pool = stageEnemyPool(stage);
-    const queue = [];
-    for (let i = 0; i < count; i++) queue.push(pickFromPool(pool));
-    if (stage.boss && waveNumber % 5 === 0) queue.push(stage.boss);
-    return queue;
+    for (let wave = 0; wave < waveCount; wave++) {
+      const count = baseCount + (remainder-- > 0 ? 1 : 0);
+      const queue = [];
+      for (let i = 0; i < count; i++) queue.push(pickFromPool(pool));
+      waves.push(queue);
+    }
+    if (stage.boss) waves[waveCount - 1].push(stage.boss);
+    return waves;
   }
 
   const state = {
@@ -800,8 +816,8 @@
     const uid = state.nextId++;
     const lane = type.raid || type.kind === "boss" ? 0 : ((uid + (team === "ally" ? 0 : 1)) % 3) - 1;
     const level = team === "ally" ? unitLevel(type.id) : 1;
-    const statPower = 1 + (level - 1) * 0.18;
-    const supportPower = 1 + (level - 1) * 0.15;
+    const statPower = (1 + (level - 1) * 0.18) * ALLY_POWER;
+    const supportPower = (1 + (level - 1) * 0.15) * ALLY_POWER;
     const maxHp = Math.round(type.hp * statPower);
     return {
       ...type,
@@ -817,7 +833,7 @@
       damage: Math.round(type.damage * statPower),
       heal: type.heal ? Math.round(type.heal * supportPower) : type.heal,
       aura: type.aura ? type.aura + (level - 1) * 0.04 : type.aura,
-      recharge: type.recharge * (1 - (level - 1) * 0.028),
+      recharge: summonRecharge(type),
       size: Math.round(type.size * VIEW_SCALE * FIGHTER_SCALE),
       range: type.range * VIEW_SCALE,
       speed: type.speed * VIEW_SCALE,
@@ -848,7 +864,7 @@
     const type = UNIT_TYPES[index];
     if (!type || !ownsUnit(type.id) || state.money < type.cost || state.cooldowns[type.id] > 0) return;
     state.money -= type.cost;
-    state.cooldowns[type.id] = type.recharge;
+    state.cooldowns[type.id] = summonRecharge(type);
     const unit = makeFighter(type, "ally");
     state.units.push(unit);
     burst(BATTLE_START, unit.y - 18, "#8fdcf0", 16, 110);
@@ -866,8 +882,8 @@
     const pressure = 1 + state.dangerLevel * 0.04;
     const type = {
       ...base,
-      hp: Math.round(base.hp * hpScale * pressure),
-      damage: Math.round(base.damage * dmgScale * pressure),
+      hp: Math.round(base.hp * hpScale * pressure * 1.08),
+      damage: Math.round(base.damage * dmgScale * pressure * 1.06),
       speed: base.speed * (1 + state.dangerLevel * 0.03),
     };
     const enemy = makeFighter(type, "enemy");
@@ -883,11 +899,10 @@
   }
 
   function updateSpawning(dt) {
-    if (!state.spawnQueue.length) {
+    if (!state.spawnQueue.length && state.waveQueues.length) {
       if (!state.waveWaiting) {
         state.waveWaiting = true;
-        const earlyRest = state.stageIndex < 10 ? 2.2 : (state.stageIndex < 20 ? 1 : 0);
-        state.waveBreak = Math.max(3.2, 4.2 + earlyRest - state.stageIndex * 0.045);
+        state.waveBreak = Math.max(1.8, 2.8 - state.stageIndex * 0.06);
         const supply = 55 + state.waveIndex * 20;
         state.money = Math.min(state.maxMoney, state.money + supply);
         showMessage(`다음 공세 접근 · 긴급 보급 +${supply}G`, 1.8);
@@ -897,19 +912,19 @@
       if (state.waveBreak <= 0) {
         state.waveWaiting = false;
         state.waveIndex += 1;
-        state.spawnQueue = buildEndlessWave(currentStage(), state.waveIndex);
+        state.spawnQueue = state.waveQueues.shift();
         state.spawnTimer = 0.45;
         showMessage(`WAVE ${state.waveIndex} 시작!`, 1.6);
       }
       return;
     }
+    if (!state.spawnQueue.length) return;
     state.spawnTimer -= dt;
     if (state.spawnTimer <= 0) {
       const kind = state.spawnQueue.shift();
       spawnEnemy(kind);
       state.spawnedCount += 1;
-      const rushStep = state.stageIndex < 10 ? 0.04 : 0.065;
-      const waveRush = Math.max(0.78, 1 - (state.waveIndex - 1) * rushStep);
+      const waveRush = 1 - (state.waveIndex - 1) * 0.1;
       state.spawnTimer = currentStage().pace * waveRush * rand(0.72, 1.04);
     }
   }
@@ -1496,6 +1511,9 @@
 
   function reset() {
     const stage = currentStage();
+    const waves = buildWaveQueues(stage);
+    const totalEnemies = waves.reduce((sum, wave) => sum + wave.length, 0);
+    const firstWave = waves.shift();
     Object.assign(state, {
       mode: "playing",
       paused: false,
@@ -1517,15 +1535,15 @@
       cannon: 0,
       command: 0,
       commandBuff: 0,
-      spawnTimer: 0,
+      spawnTimer: 1.8,
       spawnIndex: 0,
-      spawnQueue: [],
-      waveQueues: [],
-      waveIndex: 0,
-      waveTotal: 0,
-      waveBreak: INITIAL_PREP_TIME,
-      waveWaiting: true,
-      totalEnemies: Infinity,
+      spawnQueue: firstWave,
+      waveQueues: waves,
+      waveIndex: 1,
+      waveTotal: waves.length + 1,
+      waveBreak: 0,
+      waveWaiting: false,
+      totalEnemies,
       spawnedCount: 0,
       kills: 0,
       combo: 0,
@@ -1543,7 +1561,7 @@
     ui.pauseLayer.classList.add("hidden");
     ui.pauseBtn.textContent = "Ⅱ";
     updateUI();
-    setTimeout(() => showMessage(`${stage.id} ${stage.name} · 준비 ${INITIAL_PREP_TIME}초`, 2.2), 80);
+    setTimeout(() => showMessage(`${stage.id}  ${stage.name}`, 1.6), 80);
   }
 
   function update(dt) {
@@ -1591,10 +1609,11 @@
     const stage = currentStage();
     ui.stageLabel.textContent = stage.id;
     ui.stageName.textContent = stage.name;
-    ui.stageProgress.textContent = `처치 ${state.kills} · 무한 증원`;
-    ui.waveLabel.textContent = (state.waveWaiting
-      ? `${state.waveIndex === 0 ? "준비" : "보급"} ${Math.max(0, Math.ceil(state.waveBreak))}초`
-      : `WAVE ${state.waveIndex} · 무한`) + (state.dangerLevel ? ` · 위협 ${"▲".repeat(state.dangerLevel)}` : "");
+    const laterWaves = state.waveQueues.reduce((sum, wave) => sum + wave.length, 0);
+    const alive = state.enemies.filter((e) => !e.dead).length;
+    const remaining = state.spawnQueue.length + laterWaves + alive;
+    ui.stageProgress.textContent = `적 ${remaining} / ${state.totalEnemies}`;
+    ui.waveLabel.textContent = `WAVE ${state.waveIndex} / ${state.waveTotal}`;
     ui.workerLevel.textContent = `Lv.${state.worker}`;
     ui.workerCost.textContent = state.worker >= 8 ? "MAX" : `${workerCost()} G`;
     ui.workerBtn.disabled = state.worker >= 8 || state.money < workerCost() || state.mode !== "playing";
@@ -1619,7 +1638,7 @@
       const price = btn.querySelector(".price");
       if (price) price.textContent = `${type.cost} G`;
       const mask = btn.querySelector(".cooldown-mask");
-      mask.style.height = `${clamp(cd / type.recharge * 100, 0, 100)}%`;
+      mask.style.height = `${clamp(cd / summonRecharge(type) * 100, 0, 100)}%`;
       btn.title = `${type.name}: ${type.info}`;
     }
   }
@@ -1722,9 +1741,9 @@
         <strong>${type.name}</strong>
         <small>${type.cost} G · ${type.info}</small>
         <div class="deck-upgrade-row">
-          <span>${level >= 10 ? "최대 강화" : `능력치 +${(level - 1) * 18}%`}</span>
-          <button class="unit-upgrade-btn" type="button" ${level >= 10 ? "disabled" : ""}>
-            ${level >= 10 ? "MAX" : `${cost.gold}G · ◆${cost.materials}`}
+          <span>${level >= MAX_UNIT_LEVEL ? "최대 강화" : `능력치 +${Math.round((level - 1) * 18 + (ALLY_POWER - 1) * 100)}%`}</span>
+          <button class="unit-upgrade-btn" type="button" ${level >= MAX_UNIT_LEVEL ? "disabled" : ""}>
+            ${level >= MAX_UNIT_LEVEL ? "MAX" : `${cost.gold}G · ◆${cost.materials}`}
           </button>
         </div>`;
       card.addEventListener("click", (event) => {
@@ -1750,10 +1769,35 @@
     ui.materialCount.textContent = state.profile.materials;
   }
 
+  function convertStoneToGold() {
+    if (state.profile.materials < 1) {
+      ui.deckCount.textContent = "강화석 부족";
+      return;
+    }
+    state.profile.materials -= 1;
+    state.profile.gold += STONE_SELL_GOLD;
+    saveProfile();
+    renderDeckBuilder();
+    updateCollectionUI();
+    sound("upgrade");
+  }
+
+  function convertGoldToStone() {
+    if (state.profile.gold < STONE_BUY_GOLD) {
+      ui.deckCount.textContent = "보급 G 부족";
+      return;
+    }
+    state.profile.gold -= STONE_BUY_GOLD;
+    state.profile.materials += 1;
+    saveProfile();
+    renderDeckBuilder();
+    updateCollectionUI();
+    sound("upgrade");
+  }
   function upgradeUnit(id) {
     if (!ownsUnit(id)) return;
     const level = unitLevel(id);
-    if (level >= 10) return;
+    if (level >= MAX_UNIT_LEVEL) return;
     const cost = upgradeCost(id);
     if (state.profile.gold < cost.gold || state.profile.materials < cost.materials) {
       ui.deckCount.textContent = state.profile.gold < cost.gold ? "보급 G 부족" : "강화석 부족";
@@ -1865,7 +1909,7 @@
       rewardColor = "#f3c45d";
       resultText = `<b>보급 골드 ${amount}G</b> 획득!<br />대원 강화 비용으로 사용할 수 있습니다.`;
     } else {
-      const candidates = state.profile.units.filter((id) => unitLevel(id) < 10);
+      const candidates = state.profile.units.filter((id) => unitLevel(id) < MAX_UNIT_LEVEL);
       if (candidates.length) {
         const id = candidates[Math.floor(Math.random() * candidates.length)];
         const unit = UNIT_TYPES.find((entry) => entry.id === id);
@@ -1946,6 +1990,8 @@
   });
   ui.deckCloseBtn.addEventListener("click", () => ui.deckPanel.classList.add("hidden"));
   ui.deckDoneBtn.addEventListener("click", () => ui.deckPanel.classList.add("hidden"));
+  ui.convertStoneBtn.addEventListener("click", convertStoneToGold);
+  ui.convertGoldBtn.addEventListener("click", convertGoldToStone);
   ui.chestBtn.addEventListener("click", () => {
     ui.howPanel.classList.add("hidden");
     ui.deckPanel.classList.add("hidden");

@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest?v=1" />
   <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/app-icon.svg" />
-  <link rel="stylesheet" href="styles.css?v=22" />
+  <link rel="stylesheet" href="styles.css?v=23" />
 </head>
 <body>
   <section id="title-screen" class="title-screen">
@@ -83,6 +83,8 @@
             <div class="upgrade-wallet">
               <span>보급 G <b id="profile-gold">300</b></span>
               <span>강화석 <b id="material-count">8</b></span>
+              <button id="convert-stone-btn" class="convert-btn" type="button">석 1 → 50G</button>
+              <button id="convert-gold-btn" class="convert-btn" type="button">70G → 석 1</button>
             </div>
           </div>
         </div>
@@ -107,7 +109,7 @@
         <button id="chest-open-btn" class="primary-btn" type="button">상자 열기</button>
       </div>
 
-      <span class="title-version">MOONLIGHT SQUAD · v5.0</span>
+      <span class="title-version">MOONLIGHT SQUAD · v5.1</span>
     </div>
   </section>
 
@@ -217,7 +219,7 @@
 
   <script src="firebase-config.js?v=2"></script>
   <script type="module" src="firebase-save.js?v=1"></script>
-  <script src="game.js?v=26"></script>
+  <script src="game.js?v=29"></script>
   <script src="pwa.js?v=1"></script>
 </body>
 </html>
