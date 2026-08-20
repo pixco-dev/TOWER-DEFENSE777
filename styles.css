@@ -235,6 +235,38 @@ button { font: inherit; }
   gap: 14px;
 }
 
+.install-app-btn {
+  position: fixed;
+  z-index: 25;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  padding: 8px 13px;
+  border: 3px solid #111628;
+  outline: 2px solid #9de7ef;
+  background: #263a58;
+  box-shadow: 4px 4px 0 rgb(0 0 0 / 40%);
+  color: #d5f8ff;
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.install-app-btn:active { transform: translateY(3px); box-shadow: 1px 1px 0 rgb(0 0 0 / 40%); }
+
+.install-panel { text-align: left; }
+.install-panel p {
+  margin: 12px 0;
+  padding: 12px;
+  border: 2px solid #343b55;
+  background: #101426;
+  color: #c6cbd8;
+  line-height: 1.55;
+}
+.install-panel b { color: #9de7ef; }
+.install-panel strong { color: #ffe17b; }
+.install-panel > small { display: block; color: #8f98ae; line-height: 1.5; }
+
 .cloud-save-btn b {
   color: #8f97ad;
   font-size: 10px;

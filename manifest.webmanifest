@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "털뭉치 전선",
+  "short_name": "털뭉치 전선",
+  "description": "달빛 아래 마지막 성을 지키는 픽셀 전선 방어 게임",
+  "lang": "ko",
+  "start_url": "./?source=app",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#080b14",
+  "theme_color": "#131827",
+  "icons": [
+    {
+      "src": "assets/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

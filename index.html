@@ -4,12 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#131827" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="털뭉치 전선" />
   <title>털뭉치 전선</title>
-  <link rel="stylesheet" href="styles.css?v=21" />
+  <link rel="manifest" href="manifest.webmanifest?v=1" />
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/app-icon.svg" />
+  <link rel="stylesheet" href="styles.css?v=22" />
 </head>
 <body>
   <section id="title-screen" class="title-screen">
     <div class="title-shade"></div>
+    <button id="install-app-btn" class="install-app-btn hidden" type="button">앱 설치</button>
     <div class="title-content">
       <div class="pixel-logo">
         <span class="logo-kicker">MOONLIGHT FRONTIER</span>
@@ -54,6 +62,14 @@
         </div>
       </div>
 
+      <div id="install-panel" class="how-panel install-panel hidden">
+        <button id="install-close-btn" class="modal-close" type="button" aria-label="앱 설치 안내 닫기">×</button>
+        <h2>앱으로 설치하기</h2>
+        <p><b>iPhone / iPad</b><br />Safari의 공유 버튼을 누른 뒤 <strong>홈 화면에 추가</strong>를 선택하세요.</p>
+        <p><b>Android</b><br />브라우저 메뉴에서 <strong>앱 설치</strong> 또는 <strong>홈 화면에 추가</strong>를 선택하세요.</p>
+        <small>앱은 오프라인에서도 실행되며, 인터넷에 연결하면 새 버전을 자동으로 확인합니다.</small>
+      </div>
+
       <div id="deck-panel" class="how-panel deck-panel hidden">
         <button id="deck-close-btn" class="modal-close" type="button" aria-label="덱 편성 닫기">×</button>
         <div class="deck-heading">
@@ -82,16 +98,16 @@
         <h2>달빛 보급 상자</h2>
         <div class="chest-visual" aria-hidden="true">✦</div>
         <div class="chest-odds" aria-label="상자 보상 확률">
-          <span><b>45%</b> 캐릭터</span>
-          <span><b>30%</b> 강화석</span>
-          <span><b>20%</b> 보급 골드</span>
+          <span><b>55%</b> 캐릭터</span>
+          <span><b>25%</b> 강화석</span>
+          <span><b>15%</b> 보급 골드</span>
           <span><b>5%</b> 훈련서</span>
         </div>
-        <p id="chest-desc">캐릭터, 강화 재료, 보급 골드 중 하나를 획득합니다.</p>
+        <p id="chest-desc">이기면 상자를 줍니다. 첫 클리어와 보스전은 더 줍니다.</p>
         <button id="chest-open-btn" class="primary-btn" type="button">상자 열기</button>
       </div>
 
-      <span class="title-version">MOONLIGHT SQUAD · v4.8</span>
+      <span class="title-version">MOONLIGHT SQUAD · v4.9</span>
     </div>
   </section>
 
@@ -201,6 +217,7 @@
 
   <script src="firebase-config.js?v=2"></script>
   <script type="module" src="firebase-save.js?v=1"></script>
-  <script src="game.js?v=22"></script>
+  <script src="game.js?v=24"></script>
+  <script src="pwa.js?v=1"></script>
 </body>
 </html>

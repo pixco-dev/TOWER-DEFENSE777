@@ -298,11 +298,11 @@
       info: "느리고 단단한 최전선 거인",
     },
     {
-      id: "drummer", name: "진군북", cost: 330, hp: 420, damage: 22,
-      speed: 34, range: 44, cooldown: 1.1, size: 66, recharge: 8.8, kind: "drummer",
-      unlockable: true, sprite: 1, aura: 1.16,
+      id: "drummer", name: "진군북", cost: 280, hp: 580, damage: 52,
+      speed: 38, range: 48, cooldown: 0.95, size: 66, recharge: 6.8, kind: "drummer",
+      unlockable: true, sprite: 1, aura: 1.32,
       tint: "hue-rotate(95deg) saturate(1.2) brightness(1.05)", overlay: "rgba(90, 210, 130, .26)",
-      info: "주변 아군의 공격력을 끌어올린다",
+      info: "북소리로 주변 아군 공격·공속·이동을 강화한다",
     },
     {
       id: "scout", name: "정찰냥", cost: 70, hp: 95, damage: 14,
@@ -360,10 +360,10 @@
       info: "등껍질과 대형 방패로 길목을 완전히 막는다",
     },
     {
-      id: "monkey_drummer", name: "전쟁북원숭", cost: 390, hp: 455, damage: 28,
-      speed: 35, range: 45, cooldown: 1.05, size: 65, recharge: 9.6, kind: "drummer",
-      unlockable: true, aura: 1.22,
-      info: "북소리로 주변 아군의 공격력을 크게 높인다",
+      id: "monkey_drummer", name: "전쟁북원숭", cost: 340, hp: 680, damage: 64,
+      speed: 39, range: 50, cooldown: 0.9, size: 65, recharge: 7.4, kind: "drummer",
+      unlockable: true, aura: 1.42,
+      info: "북소리로 주변 아군 공격·공속·이동을 크게 높인다",
     },
     {
       id: "squirrel_scout", name: "창다람", cost: 95, hp: 120, damage: 22,
@@ -372,10 +372,10 @@
       info: "빠른 발과 긴 창으로 빈틈을 찌르는 정찰대",
     },
     {
-      id: "lightning_otter", name: "번개수달", cost: 440, hp: 310, damage: 78,
-      speed: 35, range: 235, cooldown: 1.32, size: 61, recharge: 9.8, kind: "chain",
-      projectile: true, chain: 3, chainRange: 118, unlockable: true, shot: "#59c9ff",
-      info: "번개가 가까운 적 셋에게 연쇄된다",
+      id: "lightning_otter", name: "번개수달", cost: 400, hp: 360, damage: 118,
+      speed: 38, range: 265, cooldown: 1.05, size: 61, recharge: 7.2, kind: "chain",
+      projectile: true, chain: 4, chainRange: 190, unlockable: true, shot: "#59c9ff",
+      info: "번개가 가까운 적 넷에게 강하게 연쇄된다",
     },
     {
       id: "gale_hawk", name: "돌풍매", cost: 390, hp: 245, damage: 96,
@@ -686,20 +686,16 @@
     return [...stage.pool, ...reinforcements];
   }
 
-  function buildWaveQueues(stage) {
-    const waveCount = stage.waves || 3;
-    const baseCount = Math.floor(stage.count / waveCount);
-    let remainder = stage.count % waveCount;
-    const waves = [];
-    for (let wave = 0; wave < waveCount; wave++) {
-      const count = baseCount + (remainder-- > 0 ? 1 : 0);
-      const queue = [];
-      const pool = stageEnemyPool(stage);
-      for (let i = 0; i < count; i++) queue.push(pickFromPool(pool));
-      waves.push(queue);
-    }
-    if (stage.boss) waves[waveCount - 1].push(stage.boss);
-    return waves;
+  const INITIAL_PREP_TIME = 8;
+
+  function buildEndlessWave(stage, waveNumber) {
+    const baseCount = Math.max(3, Math.ceil(stage.count / (stage.waves || 3)));
+    const count = Math.min(baseCount + Math.floor((waveNumber - 1) / 2), baseCount + 8);
+    const pool = stageEnemyPool(stage);
+    const queue = [];
+    for (let i = 0; i < count; i++) queue.push(pickFromPool(pool));
+    if (stage.boss && waveNumber % 5 === 0) queue.push(stage.boss);
+    return queue;
   }
 
   const state = {
@@ -883,7 +879,7 @@
   }
 
   function updateSpawning(dt) {
-    if (!state.spawnQueue.length && state.waveQueues.length) {
+    if (!state.spawnQueue.length) {
       if (!state.waveWaiting) {
         state.waveWaiting = true;
         const earlyRest = state.stageIndex < 10 ? 2.2 : (state.stageIndex < 20 ? 1 : 0);
@@ -897,13 +893,12 @@
       if (state.waveBreak <= 0) {
         state.waveWaiting = false;
         state.waveIndex += 1;
-        state.spawnQueue = state.waveQueues.shift();
+        state.spawnQueue = buildEndlessWave(currentStage(), state.waveIndex);
         state.spawnTimer = 0.45;
         showMessage(`WAVE ${state.waveIndex} 시작!`, 1.6);
       }
       return;
     }
-    if (!state.spawnQueue.length) return;
     state.spawnTimer -= dt;
     if (state.spawnTimer <= 0) {
       const kind = state.spawnQueue.shift();
@@ -986,6 +981,27 @@
     return Math.abs(baseX - actor.x) - actor.size * 0.4 - 58;
   }
 
+  function allyDrumBuff(actor) {
+    if (actor.team !== "ally") return { damage: 1, haste: 1, speed: 1 };
+    let damage = 1;
+    const auraRange = 280;
+    for (const unit of state.units) {
+      if (unit.dead || unit.kind !== "drummer") continue;
+      if (Math.abs(unit.x - actor.x) <= auraRange) {
+        damage = Math.max(damage, unit.aura || 1.28);
+      }
+    }
+    if (damage <= 1) return { damage: 1, haste: 1, speed: 1 };
+    return { damage, haste: 0.78, speed: 1.22 };
+  }
+
+  function attackDelay(actor) {
+    let scale = 1;
+    if (actor.team === "ally" && state.commandBuff > 0) scale *= 0.66;
+    scale *= allyDrumBuff(actor).haste;
+    return actor.cooldown * scale;
+  }
+
   function rollAttackDamage(actor) {
     let amount = actor.damage;
     if (actor.kind === "moco") {
@@ -1000,10 +1016,7 @@
     if (actor.kind === "berserker" && actor.hp < actor.maxHp * 0.42) {
       amount *= 1.55;
     }
-    if (actor.team === "ally") {
-      const drum = state.units.some((unit) => !unit.dead && unit.kind === "drummer" && Math.abs(unit.x - actor.x) < 170);
-      if (drum) amount *= 1.16;
-    }
+    amount *= allyDrumBuff(actor).damage;
     const critChance = actor.critChance || (actor.kind === "archer" ? 0.18 : 0);
     if (critChance && Math.random() < critChance) {
       amount *= actor.critPower || 1.75;
@@ -1013,7 +1026,7 @@
   }
 
   function attack(actor, target, baseHit) {
-    actor.attackTimer = actor.cooldown * (actor.team === "ally" && state.commandBuff > 0 ? 0.66 : 1);
+    actor.attackTimer = attackDelay(actor);
     actor.attackAnim = actor.attackDuration;
     actor.moving = false;
     const attackDamage = rollAttackDamage(actor);
@@ -1137,7 +1150,7 @@
         if (patient && missing > patient.maxHp * 0.08) {
           const amount = Math.min(missing, actor.heal);
           patient.hp += amount;
-          actor.attackTimer = actor.cooldown * (actor.team === "ally" && state.commandBuff > 0 ? 0.66 : 1);
+          actor.attackTimer = attackDelay(actor);
           actor.attackAnim = actor.attackDuration;
           floating(patient.x, patient.y - patient.size, `+${Math.round(amount)}`, "#91efbd", 15);
           spawnRing(patient.x, patient.y - patient.size * 0.45, actor.team === "ally" ? "#8fe9d0" : "#c987de");
@@ -1156,6 +1169,7 @@
         let speedScale = 1;
         if (actor.slow > 0) speedScale *= 0.58;
         if (actor.team === "ally" && state.commandBuff > 0) speedScale *= 1.32;
+        speedScale *= allyDrumBuff(actor).speed;
         const friends = actor.team === "ally" ? state.units : state.enemies;
         for (const friend of friends) {
           if (friend === actor || friend.dead || friend.lane !== actor.lane) continue;
@@ -1227,17 +1241,18 @@
             p.target.poisonDamage = Math.max(p.target.poisonDamage, p.poisonDamage);
             p.target.poisonTick = Math.min(p.target.poisonTick || 0.35, 0.35);
           }
-          if (p.chain && !p.target.dead) {
+          if (p.chain) {
+            const originX = p.target ? p.target.x : tx;
             const foes = p.team === "ally" ? state.enemies : state.units;
             const nearby = foes
-              .filter((foe) => foe !== p.target && !foe.dead && Math.abs(foe.x - p.target.x) <= p.chainRange)
-              .sort((a, b) => Math.abs(a.x - p.target.x) - Math.abs(b.x - p.target.x))
+              .filter((foe) => foe !== p.target && !foe.dead && Math.abs(foe.x - originX) <= p.chainRange)
+              .sort((a, b) => Math.abs(a.x - originX) - Math.abs(b.x - originX))
               .slice(0, Math.max(0, p.chain - 1));
             nearby.forEach((foe, index) => {
-              damage(foe, p.damage * (index === 0 ? 0.62 : 0.44), foe.x, foe.y - foe.size * 0.52);
+              damage(foe, p.damage * (0.88 - index * 0.12), foe.x, foe.y - foe.size * 0.52);
               burst(foe.x, foe.y - foe.size * 0.5, p.color, 10, 105);
             });
-            if (nearby.length) floating(p.target.x, p.target.y - p.target.size - 18, `연쇄 ${nearby.length + 1}`, "#75ddff", 15);
+            if (nearby.length) floating(originX, (p.target ? p.target.y - p.target.size : ty) - 18, `연쇄 ${nearby.length + 1}`, "#75ddff", 15);
           }
           burst(tx, ty, p.color, 7, 80);
         }
@@ -1437,16 +1452,20 @@
       state.unlocked = Math.max(state.unlocked, state.stageIndex + 1);
       saveUnlock(state.unlocked);
     }
-    let chestReward = false;
-    if (win && !state.profile.claimedStages.includes(stage.id)) {
-      state.profile.claimedStages.push(stage.id);
-      state.profile.chests += 1;
-      chestReward = true;
+    let chestsGained = 0;
+    if (win) {
+      chestsGained = 1;
+      if (!state.profile.claimedStages.includes(stage.id)) {
+        state.profile.claimedStages.push(stage.id);
+        chestsGained += 1;
+      }
+      if (stage.boss) chestsGained += 1;
+      state.profile.chests += chestsGained;
     }
     let progressionReward = "";
     if (win) {
       const clearGold = 70 + state.stageIndex * 12;
-      const clearMaterials = chestReward ? 2 : 1;
+      const clearMaterials = chestsGained >= 2 ? 2 : 1;
       state.profile.gold += clearGold;
       state.profile.materials += clearMaterials;
       progressionReward = `<br />보급 골드 <b>${clearGold}G</b> · 강화석 <b>${clearMaterials}개</b>`;
@@ -1457,8 +1476,8 @@
       : "성채 함락";
     ui.overlayDesc.innerHTML = win
       ? (hasNext
-        ? `<b>${stage.name}</b>을 지켜냈습니다.<br />${state.kills}명 처치 · 최고 ${state.bestCombo} 콤보${progressionReward}${chestReward ? "<br /><b>달빛 보급 상자 1개 획득!</b>" : ""}`
-        : `8장 끝까지 전선을 지켜냈습니다.<br /><b>${Math.floor(state.battleTime)}초</b> · 최고 ${state.bestCombo} 콤보${progressionReward}${chestReward ? "<br /><b>달빛 보급 상자 1개 획득!</b>" : ""}`)
+        ? `<b>${stage.name}</b>을 지켜냈습니다.<br />${state.kills}명 처치 · 최고 ${state.bestCombo} 콤보${progressionReward}${chestsGained ? `<br /><b>달빛 보급 상자 ${chestsGained}개 획득!</b>` : ""}`
+        : `8장 끝까지 전선을 지켜냈습니다.<br /><b>${Math.floor(state.battleTime)}초</b> · 최고 ${state.bestCombo} 콤보${progressionReward}${chestsGained ? `<br /><b>달빛 보급 상자 ${chestsGained}개 획득!</b>` : ""}`)
       : `${stage.id} ${stage.name}<br />적의 공세를 막지 못했습니다.`;
     ui.overlayBtn.textContent = win
       ? (hasNext ? "다음 스테이지" : "스테이지 선택")
@@ -1473,9 +1492,6 @@
 
   function reset() {
     const stage = currentStage();
-    const waves = buildWaveQueues(stage);
-    const totalEnemies = waves.reduce((sum, wave) => sum + wave.length, 0);
-    const firstWave = waves.shift();
     Object.assign(state, {
       mode: "playing",
       paused: false,
@@ -1497,15 +1513,15 @@
       cannon: 0,
       command: 0,
       commandBuff: 0,
-      spawnTimer: 1.8,
+      spawnTimer: 0,
       spawnIndex: 0,
-      spawnQueue: firstWave,
-      waveQueues: waves,
-      waveIndex: 1,
-      waveTotal: waves.length + 1,
-      waveBreak: 0,
-      waveWaiting: false,
-      totalEnemies,
+      spawnQueue: [],
+      waveQueues: [],
+      waveIndex: 0,
+      waveTotal: 0,
+      waveBreak: INITIAL_PREP_TIME,
+      waveWaiting: true,
+      totalEnemies: Infinity,
       spawnedCount: 0,
       kills: 0,
       combo: 0,
@@ -1523,7 +1539,7 @@
     ui.pauseLayer.classList.add("hidden");
     ui.pauseBtn.textContent = "Ⅱ";
     updateUI();
-    setTimeout(() => showMessage(`${stage.id}  ${stage.name}`, 1.6), 80);
+    setTimeout(() => showMessage(`${stage.id} ${stage.name} · 준비 ${INITIAL_PREP_TIME}초`, 2.2), 80);
   }
 
   function update(dt) {
@@ -1571,13 +1587,10 @@
     const stage = currentStage();
     ui.stageLabel.textContent = stage.id;
     ui.stageName.textContent = stage.name;
-    const alive = state.enemies.filter((e) => !e.dead).length;
-    const laterWaves = state.waveQueues.reduce((sum, wave) => sum + wave.length, 0);
-    const remaining = state.spawnQueue.length + laterWaves + alive;
-    ui.stageProgress.textContent = `남은 적 ${remaining} / ${state.totalEnemies || stage.count}`;
+    ui.stageProgress.textContent = `처치 ${state.kills} · 무한 증원`;
     ui.waveLabel.textContent = (state.waveWaiting
-      ? `보급 ${Math.max(0, Math.ceil(state.waveBreak))}초`
-      : `WAVE ${state.waveIndex} / ${state.waveTotal}`) + (state.dangerLevel ? ` · 위협 ${"▲".repeat(state.dangerLevel)}` : "");
+      ? `${state.waveIndex === 0 ? "준비" : "보급"} ${Math.max(0, Math.ceil(state.waveBreak))}초`
+      : `WAVE ${state.waveIndex} · 무한`) + (state.dangerLevel ? ` · 위협 ${"▲".repeat(state.dangerLevel)}` : "");
     ui.workerLevel.textContent = `Lv.${state.worker}`;
     ui.workerCost.textContent = state.worker >= 8 ? "MAX" : `${workerCost()} G`;
     ui.workerBtn.disabled = state.worker >= 8 || state.money < workerCost() || state.mode !== "playing";
@@ -1809,8 +1822,8 @@
     ui.chestOpenBtn.disabled = state.profile.chests <= 0;
     ui.chestOpenBtn.textContent = state.profile.chests > 0 ? "상자 열기" : "상자 없음";
     ui.chestDesc.innerHTML = state.profile.chests <= 0
-      ? "스테이지 최초 클리어로 상자를 획득합니다.<br />캐릭터 외에도 강화석·보급 골드·훈련서가 등장합니다."
-      : `상자 ${state.profile.chests}개 · 미보유 대원 ${locked.length}명<br />캐릭터 중복 시 <b>강화석 6개 + 보급 골드 120G</b>로 자동 전환됩니다.`;
+      ? "전투에서 이기면 상자를 얻습니다.<br />첫 클리어와 보스전은 상자를 더 줍니다."
+      : `상자 ${state.profile.chests}개 · 미보유 대원 ${locked.length}명<br />캐릭터 중복 시 <b>강화석 8개 + 보급 골드 180G</b>로 자동 전환됩니다.`;
   }
 
   function openChest() {
@@ -1820,28 +1833,30 @@
     let resultText = "";
     let rewardColor = "#d58cff";
 
-    if (roll < 0.45) {
+    if (roll < 0.55) {
       const pool = UNIT_TYPES.filter((unit) => unit.unlockable);
-      const unit = pool[Math.floor(Math.random() * pool.length)];
+      const locked = pool.filter((unit) => !ownsUnit(unit.id));
+      const pickFrom = locked.length ? locked : pool;
+      const unit = pickFrom[Math.floor(Math.random() * pickFrom.length)];
       rewardColor = unit.shot || unit.overlay || "#d58cff";
       if (ownsUnit(unit.id)) {
         state.profile.duplicates[unit.id] = (Number(state.profile.duplicates[unit.id]) || 0) + 1;
-        state.profile.materials += 6;
-        state.profile.gold += 120;
-        resultText = `<b>${unit.name} 중복!</b><br />강화석 6개와 보급 골드 120G로 전환했습니다.`;
+        state.profile.materials += 8;
+        state.profile.gold += 180;
+        resultText = `<b>${unit.name} 중복!</b><br />강화석 8개와 보급 골드 180G로 전환했습니다.`;
       } else {
         state.profile.units.push(unit.id);
         state.profile.levels[unit.id] = 1;
         if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(unit.id);
         resultText = `<b>${unit.name}</b> 신규 영입!<br />${unit.info}`;
       }
-    } else if (roll < 0.75) {
-      const amount = 4 + Math.floor(Math.random() * 5);
+    } else if (roll < 0.80) {
+      const amount = 5 + Math.floor(Math.random() * 6);
       state.profile.materials += amount;
       rewardColor = "#8fe9d2";
       resultText = `<b>강화석 ${amount}개</b> 획득!<br />덱 편성 화면에서 대원을 강화할 수 있습니다.`;
     } else if (roll < 0.95) {
-      const amount = 150 + Math.floor(Math.random() * 151);
+      const amount = 180 + Math.floor(Math.random() * 181);
       state.profile.gold += amount;
       rewardColor = "#f3c45d";
       resultText = `<b>보급 골드 ${amount}G</b> 획득!<br />대원 강화 비용으로 사용할 수 있습니다.`;
