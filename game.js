@@ -138,7 +138,7 @@
 
   const EXTRA_ALLY_SPRITES = {
     lightning_otter: { image: new Image(), src: "assets/pixel-ally-lightning-otter-v1.png", crop: [18, 107, 366, 380] },
-    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v1.png", crop: [18, 124, 366, 380] },
+    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v2.png", crop: [18, 124, 366, 380] },
     herb_hedgehog: { image: new Image(), src: "assets/pixel-ally-herb-hedgehog-v1.png", crop: [18, 106, 366, 380] },
   };
   const EXTRA_ENEMY_SPRITES = {
@@ -148,13 +148,19 @@
     mooncap_witch: { image: new Image(), src: "assets/pixel-enemy-mooncap-witch-v2.png", crop: [18, 58, 366, 380] },
   };
   for (const sprite of Object.values(EXTRA_ALLY_SPRITES)) {
-    sprite.image.src = sprite.src;
     sprite.image.addEventListener("load", () => {
+      sprite.sheet = stripSpriteBackdrop(sprite.image);
       renderCardPortraits();
       renderDeckBuilder();
     });
+    sprite.image.src = sprite.src;
   }
-  for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) sprite.image.src = sprite.src;
+  for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) {
+    sprite.image.addEventListener("load", () => {
+      sprite.sheet = stripSpriteBackdrop(sprite.image);
+    });
+    sprite.image.src = sprite.src;
+  }
 
   const ALLY_CROPS = [
     [12, 345, 303, 675],
@@ -228,6 +234,86 @@
     }
     surfaceCtx.putImageData(frame, 0, 0);
     return surface;
+  }
+
+  function stripSpriteBackdrop(image) {
+    try {
+    const surface = document.createElement("canvas");
+    surface.width = image.naturalWidth;
+    surface.height = image.naturalHeight;
+    const surfaceCtx = surface.getContext("2d", { willReadFrequently: true });
+    surfaceCtx.drawImage(image, 0, 0);
+    const frame = surfaceCtx.getImageData(0, 0, surface.width, surface.height);
+    const pixels = frame.data;
+    const width = surface.width;
+    const height = surface.height;
+    const total = width * height;
+    const light = new Uint8Array(total);
+    const density = new Uint16Array(total);
+    for (let index = 0; index < total; index++) {
+      const p = index * 4;
+      if (pixels[p + 3] < 250) continue;
+      const r = pixels[p];
+      const g = pixels[p + 1];
+      const b = pixels[p + 2];
+      const min = Math.min(r, g, b);
+      const max = Math.max(r, g, b);
+      if (min >= 200 && max - min < 14) light[index] = 1;
+    }
+    for (let index = 0; index < total; index++) {
+      if (!light[index]) continue;
+      const x = index % width;
+      const y = (index / width) | 0;
+      let count = 0;
+      for (let oy = -2; oy <= 2; oy++) {
+        const ny = y + oy;
+        if (ny < 0 || ny >= height) continue;
+        for (let ox = -2; ox <= 2; ox++) {
+          const nx = x + ox;
+          if (nx < 0 || nx >= width) continue;
+          count += light[ny * width + nx];
+        }
+      }
+      density[index] = count;
+    }
+    for (let index = 0; index < total; index++) {
+      if (light[index] && density[index] >= 8) pixels[index * 4 + 3] = 0;
+    }
+    const visited = new Uint8Array(total);
+    const queue = new Int32Array(total);
+    let head = 0;
+    let tail = 0;
+    const enqueue = (index) => {
+      if (index < 0 || index >= total || visited[index]) return;
+      const p = index * 4;
+      const alpha = pixels[p + 3];
+      const max = Math.max(pixels[p], pixels[p + 1], pixels[p + 2]);
+      if (alpha < 8 || max <= 16) {
+        visited[index] = 1;
+        queue[tail++] = index;
+      }
+    };
+    for (let index = 0; index < total; index++) {
+      if (pixels[index * 4 + 3] < 8) enqueue(index);
+    }
+    while (head < tail) {
+      const index = queue[head++];
+      const x = index % width;
+      if (x > 0) enqueue(index - 1);
+      if (x < width - 1) enqueue(index + 1);
+      if (index >= width) enqueue(index - width);
+      if (index < total - width) enqueue(index + width);
+    }
+    for (let index = 0; index < total; index++) {
+      if (visited[index] && Math.max(pixels[index * 4], pixels[index * 4 + 1], pixels[index * 4 + 2]) <= 16) {
+        pixels[index * 4 + 3] = 0;
+      }
+    }
+    surfaceCtx.putImageData(frame, 0, 0);
+    return surface;
+    } catch (error) {
+      return image;
+    }
   }
 
   allySheet.addEventListener("load", () => {
@@ -1673,8 +1759,8 @@
   function unitSprite(type) {
     const extraSprite = EXTRA_ALLY_SPRITES[type.id];
     if (extraSprite) {
-      return extraSprite.image.complete && extraSprite.image.naturalWidth
-        ? { sheet: extraSprite.image, crop: extraSprite.crop, unique: true }
+      return extraSprite.sheet
+        ? { sheet: extraSprite.sheet, crop: extraSprite.crop, unique: true }
         : null;
     }
     if (type.id === "titan") {
@@ -2556,17 +2642,16 @@
     const ally = actor.team === "ally";
     const extraAllySprite = ally ? EXTRA_ALLY_SPRITES[actor.id] : null;
     const extraEnemySprite = ally ? null : EXTRA_ENEMY_SPRITES[actor.id];
+    if ((extraAllySprite && !extraAllySprite.sheet) || (extraEnemySprite && !extraEnemySprite.sheet)) return;
+    const extraSheet = extraAllySprite?.sheet || extraEnemySprite?.sheet || null;
     const isRockShield = ally && actor.id === "titan";
     const unlockIndex = ally ? UNLOCKABLE_SPRITE_INDEX[actor.id] : undefined;
     const hasUnlockableSprite = ally && unlockIndex !== undefined;
-    const hasUniqueSprite = Boolean(extraAllySprite || extraEnemySprite) || isRockShield || hasUnlockableSprite;
-    const sheet = extraAllySprite
-      ? extraAllySprite.image
-      : (extraEnemySprite
-        ? extraEnemySprite.image
-        : (isRockShield
-          ? rockShieldPixels
-          : (hasUnlockableSprite ? unlockablePixels : (ally ? allyPixels : enemyPixels))));
+    const hasUniqueSprite = Boolean(extraSheet) || isRockShield || hasUnlockableSprite;
+    const sheet = extraSheet
+      || (isRockShield
+        ? rockShieldPixels
+        : (hasUnlockableSprite ? unlockablePixels : (ally ? allyPixels : enemyPixels)));
     const uniqueAlly = hasUniqueSprite && Boolean(sheet);
     const index = ally
       ? (ALLY_SPRITE_INDEX[actor.kind] ?? actor.sprite ?? 0)
