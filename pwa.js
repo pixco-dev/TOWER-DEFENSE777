@@ -1,4 +1,17 @@
 (() => {
+  ["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
+    document.addEventListener(type, (event) => event.preventDefault());
+  });
+
+  let lastTouchEnd = 0;
+  document.addEventListener("touchend", (event) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 350 && !event.target.closest("button, a, input, textarea, select, label")) {
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+
   const installButton = document.getElementById("install-app-btn");
   const installPanel = document.getElementById("install-panel");
   const closeButton = document.getElementById("install-close-btn");

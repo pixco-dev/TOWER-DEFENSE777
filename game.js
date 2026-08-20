@@ -698,6 +698,8 @@
     return [...stage.pool, ...reinforcements];
   }
 
+  const INITIAL_PREP_TIME = 8;
+
   function buildWaveQueues(stage) {
     const waveCount = stage.waves || 3;
     const baseCount = Math.floor(stage.count / waveCount);
@@ -1513,7 +1515,6 @@
     const stage = currentStage();
     const waves = buildWaveQueues(stage);
     const totalEnemies = waves.reduce((sum, wave) => sum + wave.length, 0);
-    const firstWave = waves.shift();
     Object.assign(state, {
       mode: "playing",
       paused: false,
@@ -1535,14 +1536,14 @@
       cannon: 0,
       command: 0,
       commandBuff: 0,
-      spawnTimer: 1.8,
+      spawnTimer: 0,
       spawnIndex: 0,
-      spawnQueue: firstWave,
+      spawnQueue: [],
       waveQueues: waves,
-      waveIndex: 1,
-      waveTotal: waves.length + 1,
-      waveBreak: 0,
-      waveWaiting: false,
+      waveIndex: 0,
+      waveTotal: waves.length,
+      waveBreak: INITIAL_PREP_TIME,
+      waveWaiting: true,
       totalEnemies,
       spawnedCount: 0,
       kills: 0,
@@ -1561,7 +1562,7 @@
     ui.pauseLayer.classList.add("hidden");
     ui.pauseBtn.textContent = "Ⅱ";
     updateUI();
-    setTimeout(() => showMessage(`${stage.id}  ${stage.name}`, 1.6), 80);
+    setTimeout(() => showMessage(`${stage.id}  ${stage.name} · 준비 ${INITIAL_PREP_TIME}초`, 2.2), 80);
   }
 
   function update(dt) {
@@ -1613,7 +1614,9 @@
     const alive = state.enemies.filter((e) => !e.dead).length;
     const remaining = state.spawnQueue.length + laterWaves + alive;
     ui.stageProgress.textContent = `적 ${remaining} / ${state.totalEnemies}`;
-    ui.waveLabel.textContent = `WAVE ${state.waveIndex} / ${state.waveTotal}`;
+    ui.waveLabel.textContent = state.waveWaiting
+      ? `${state.waveIndex === 0 ? "준비" : "대기"} ${Math.max(0, Math.ceil(state.waveBreak))}초`
+      : `WAVE ${state.waveIndex} / ${state.waveTotal}`;
     ui.workerLevel.textContent = `Lv.${state.worker}`;
     ui.workerCost.textContent = state.worker >= 8 ? "MAX" : `${workerCost()} G`;
     ui.workerBtn.disabled = state.worker >= 8 || state.money < workerCost() || state.mode !== "playing";

@@ -11,7 +11,10 @@
   --pixel-shadow: 0 4px 0 #090b13;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  touch-action: manipulation;
+}
 
 html, body {
   margin: 0;
@@ -22,6 +25,9 @@ html, body {
   background: #080b14;
   color: var(--ink);
   font-family: "Gowun Dodum", "Malgun Gothic", sans-serif;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 button { font: inherit; }
@@ -797,6 +803,7 @@ button { font: inherit; }
   height: 100%;
   overflow: hidden;
   background: #142033;
+  touch-action: none;
 }
 
 canvas#game {
