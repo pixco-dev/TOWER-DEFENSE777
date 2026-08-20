@@ -145,6 +145,10 @@
     lightning_otter: { image: new Image(), src: "assets/pixel-ally-lightning-otter-v1.png", crop: [18, 107, 366, 380] },
     gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v2.png", crop: [18, 124, 366, 380] },
     herb_hedgehog: { image: new Image(), src: "assets/pixel-ally-herb-hedgehog-v1.png", crop: [18, 106, 366, 380] },
+    drummer: { image: new Image(), src: "assets/pixel-ally-march-drummer-v1.png", crop: [0, 0, 384, 384] },
+    iron_hare: { image: new Image(), src: "assets/pixel-ally-iron-hare-v1.png", crop: [0, 0, 384, 384] },
+    star_fox: { image: new Image(), src: "assets/pixel-ally-star-fox-v1.png", crop: [0, 0, 384, 384] },
+    bomb_furball: { image: new Image(), src: "assets/pixel-ally-bomb-fur-v1.png", crop: [0, 0, 384, 384] },
   };
   const EXTRA_ENEMY_SPRITES = {
     bloodwing_bat: { image: new Image(), src: "assets/pixel-enemy-bloodwing-bat-v2.png", crop: [18, 164, 366, 380] },
@@ -295,14 +299,14 @@
       id: "bomber", name: "폭죽술사", cost: 390, hp: 260, damage: 88,
       speed: 33, range: 185, cooldown: 1.85, size: 62, recharge: 10.2, kind: "bomber",
       projectile: true, splash: 118, unlockable: true, sprite: 4, shot: "#ff8a4a",
-      tint: "hue-rotate(-40deg) saturate(1.5) brightness(1.05)", overlay: "rgba(255, 120, 64, .28)",
+      tint: "sepia(.45) hue-rotate(330deg) saturate(2.1) brightness(.98) contrast(1.08)", overlay: "rgba(255, 78, 42, .34)",
       info: "넓은 폭발을 일으키는 화공 유닛",
     },
     {
       id: "sniper", name: "달그림자", cost: 520, hp: 170, damage: 210,
       speed: 26, range: 340, cooldown: 2.55, size: 56, recharge: 13.5, kind: "sniper",
       projectile: true, critChance: 0.22, critPower: 1.9, unlockable: true, sprite: 2, shot: "#d7e7ff",
-      tint: "grayscale(.15) contrast(1.2) brightness(.92)", overlay: "rgba(210, 220, 240, .22)",
+      tint: "grayscale(.75) sepia(.18) hue-rotate(165deg) saturate(1.25) contrast(1.22) brightness(.82)", overlay: "rgba(126, 166, 205, .28)",
       info: "아주 멀리서 한 발을 꽂는 저격수",
     },
     {
@@ -316,14 +320,14 @@
       id: "drummer", name: "진군북", cost: 280, hp: 580, damage: 52,
       speed: 38, range: 48, cooldown: 0.95, size: 66, recharge: 6.8, kind: "drummer",
       unlockable: true, sprite: 1, aura: 1.32,
-      tint: "hue-rotate(95deg) saturate(1.2) brightness(1.05)", overlay: "rgba(90, 210, 130, .26)",
+      tint: "sepia(.65) hue-rotate(72deg) saturate(1.9) brightness(.98) contrast(1.08)", overlay: "rgba(55, 198, 108, .34)",
       info: "북소리로 주변 아군 공격·공속·이동을 강화한다",
     },
     {
       id: "scout", name: "정찰냥", cost: 70, hp: 95, damage: 14,
       speed: 84, range: 34, cooldown: 0.48, size: 48, recharge: 1.6, kind: "scout",
       unlockable: true, sprite: 0,
-      tint: "hue-rotate(40deg) saturate(1.1) brightness(1.15)", overlay: "rgba(255, 230, 120, .24)",
+      tint: "sepia(.7) hue-rotate(145deg) saturate(1.7) brightness(1.03) contrast(1.08)", overlay: "rgba(76, 205, 190, .3)",
       info: "값싸고 빠른 정찰 돌격대",
     },
     {
@@ -408,7 +412,7 @@
       id: "wander_swordsman", name: "방랑검객", cost: 230, hp: 310, damage: 46,
       speed: 68, range: 40, cooldown: 0.38, size: 54, recharge: 5.8, kind: "wanderer",
       unlockable: true, sprite: 0, cleave: 30, role: "빠른 근접 연타",
-      tint: "sepia(.2) hue-rotate(325deg) saturate(1.2)", overlay: "rgba(235, 116, 92, .18)",
+      tint: "sepia(.72) hue-rotate(305deg) saturate(1.85) brightness(.94) contrast(1.12)", overlay: "rgba(206, 74, 91, .34)",
       info: "빠른 쌍검 연타로 전열의 빈틈을 파고든다",
     },
     {
@@ -416,7 +420,7 @@
       speed: 31, range: 335, cooldown: 1.75, size: 58, recharge: 11.8, kind: "moonshot",
       projectile: true, critChance: 0.2, critPower: 2.05, unlockable: true, sprite: 2,
       shot: "#bfeaff", role: "긴 사거리 정밀 사격",
-      tint: "hue-rotate(175deg) saturate(.9) brightness(1.1)", overlay: "rgba(137, 210, 255, .2)",
+      tint: "sepia(.45) hue-rotate(155deg) saturate(1.65) brightness(1.08) contrast(1.08)", overlay: "rgba(91, 198, 255, .32)",
       info: "달빛 화살로 먼 적을 정밀하게 저격한다",
     },
     {
@@ -424,14 +428,14 @@
       speed: 27, range: 290, cooldown: 1.55, size: 65, recharge: 9.6, kind: "timid",
       projectile: true, splash: 76, knockback: 26, slow: 1.4, unlockable: true, sprite: 4,
       shot: "#c9a7ff", role: "밀쳐내는 달빛 마법",
-      tint: "hue-rotate(38deg) saturate(.8) brightness(1.08)", overlay: "rgba(196, 150, 255, .2)",
+      tint: "grayscale(.18) sepia(.55) hue-rotate(132deg) saturate(1.65) brightness(1.08)", overlay: "rgba(115, 225, 218, .3)",
       info: "겁은 많지만 적을 밀어내는 마법은 확실하다",
     },
     {
       id: "iron_hare", name: "철갑토끼", cost: 430, hp: 1040, damage: 48,
       speed: 24, range: 48, cooldown: 1.05, size: 70, recharge: 11.5, kind: "ironhare",
       unlockable: true, sprite: 1, guard: true, cleave: 52, role: "느리지만 높은 체력",
-      tint: "grayscale(.15) contrast(1.15) brightness(.92)", overlay: "rgba(160, 180, 205, .23)",
+      tint: "grayscale(.92) sepia(.12) hue-rotate(185deg) saturate(1.35) contrast(1.38) brightness(.7)", overlay: "rgba(72, 91, 122, .4)",
       info: "철갑 방패로 긴 시간 전선을 붙잡는다",
     },
     {
@@ -439,7 +443,7 @@
       speed: 46, range: 285, cooldown: 1.12, size: 57, recharge: 9.4, kind: "starfox",
       projectile: true, critChance: 0.28, critPower: 1.85, unlockable: true, sprite: 2,
       shot: "#ffe17b", role: "연속 치명타 사격",
-      tint: "hue-rotate(320deg) saturate(1.2) brightness(1.1)", overlay: "rgba(255, 220, 100, .18)",
+      tint: "sepia(.55) hue-rotate(265deg) saturate(2.05) brightness(1.02) contrast(1.1)", overlay: "rgba(222, 102, 218, .32)",
       info: "별가루 화살로 치명타를 연이어 노린다",
     },
     {
@@ -447,7 +451,7 @@
       speed: 40, range: 175, cooldown: 1.45, size: 60, recharge: 8.8, kind: "bombfur",
       projectile: true, splash: 142, knockback: 18, unlockable: true, sprite: 4,
       shot: "#ffad66", role: "넓은 범위 폭발",
-      tint: "hue-rotate(345deg) saturate(1.55) brightness(.95)", overlay: "rgba(255, 104, 63, .23)",
+      tint: "sepia(.62) hue-rotate(330deg) saturate(2.3) brightness(.88) contrast(1.15)", overlay: "rgba(202, 58, 35, .38)",
       info: "짧은 사거리 대신 거대한 폭발로 무리를 쓸어낸다",
     },
   ];
@@ -938,9 +942,12 @@
     const uid = state.nextId++;
     const lane = type.raid || type.kind === "boss" ? 0 : ((uid + (team === "ally" ? 0 : 1)) % 3) - 1;
     const level = team === "ally" ? unitLevel(type.id) : 1;
-    const statPower = 1 + (level - 1) * 0.08;
-    const supportPower = 1 + (level - 1) * 0.06;
-    const maxHp = Math.round(type.hp * statPower);
+    const damagePower = 1 + (level - 1) * 0.12;
+    const hpPower = 1 + (level - 1) * 0.16;
+    const supportPower = 1 + (level - 1) * 0.12;
+    const vitality = type.guard || type.kind === "titan" || type.kind === "ironhare" ? 1.55 : 1.3;
+    const attackTempo = 1 - Math.min(0.135, (level - 1) * 0.015);
+    const maxHp = Math.round(type.hp * hpPower * vitality);
     return {
       ...type,
       uid,
@@ -952,8 +959,10 @@
       lane,
       hp: maxHp,
       maxHp,
-      damage: Math.round(type.damage * statPower),
+      damage: Math.round(type.damage * damagePower),
       heal: type.heal ? Math.round(type.heal * supportPower) : type.heal,
+      aura: type.aura ? 1 + (type.aura - 1) * supportPower : type.aura,
+      cooldown: type.cooldown * attackTempo,
       size: Math.round(type.size * VIEW_SCALE * FIGHTER_SCALE),
       range: type.range * VIEW_SCALE,
       speed: type.speed * VIEW_SCALE,
@@ -984,7 +993,8 @@
     const type = UNIT_TYPES[index];
     if (!type || !ownsUnit(type.id) || state.money < type.cost || state.cooldowns[type.id] > 0) return;
     state.money -= type.cost;
-    state.cooldowns[type.id] = type.recharge;
+    const rechargeBoost = 1 - Math.min(0.18, (unitLevel(type.id) - 1) * 0.02);
+    state.cooldowns[type.id] = type.recharge * rechargeBoost;
     state.deployedUnitIds.push(type.id);
     if (type.guard || type.kind === "titan" || type.kind === "ironhare") state.tankDeployments += 1;
     const unit = makeFighter(type, "ally");
@@ -1835,11 +1845,13 @@
       const scale = Math.min((card.width - 16) / sourceW, (card.height - 4) / sourceH);
       const drawW = Math.round(sourceW * scale);
       const drawH = Math.round(sourceH * scale);
+      if (type.tint && !source.unique) cardCtx.filter = type.tint;
       cardCtx.drawImage(
         source.sheet,
         x1, y1, sourceW, sourceH,
         Math.round((card.width - drawW) / 2), card.height - drawH, drawW, drawH
       );
+      cardCtx.filter = "none";
       if (type.overlay && !source.unique) {
         cardCtx.globalCompositeOperation = "source-atop";
         cardCtx.fillStyle = type.overlay;
@@ -1875,7 +1887,7 @@
         <strong>${type.name}</strong>
         <small>${type.cost} G · ${type.info}</small>
         <div class="deck-upgrade-row">
-          <span>${level >= 10 ? "최대 강화" : `능력치 +${(level - 1) * 8}%`}</span>
+          <span>${level >= 10 ? "최대 강화" : `공격 +${(level - 1) * 12}% · 체력 +${(level - 1) * 16}%`}</span>
           <button class="unit-upgrade-btn" type="button" ${level >= 10 ? "disabled" : ""}>
             ${level >= 10 ? "MAX" : `${cost.gold}G · ◆${cost.materials}`}
           </button>
