@@ -1,4 +1,4 @@
-const CACHE_NAME = "fur-frontline-offline-v5";
+const CACHE_NAME = "fur-frontline-offline-v7";
 const APP_SHELL = [
   "./", "./index.html", "./styles.css", "./game.js", "./firebase-config.js",
   "./firebase-save.js", "./pwa.js", "./manifest.webmanifest", "./assets/app-icon.svg",

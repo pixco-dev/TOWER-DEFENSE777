@@ -151,16 +151,16 @@
     bone_raven: { image: new Image(), src: "assets/pixel-enemy-bone-raven-v3.png", crop: [18, 109, 366, 380] },
     siege_rhino: { image: new Image(), src: "assets/pixel-enemy-siege-rhino-v2.png", crop: [18, 182, 366, 380] },
     mooncap_witch: { image: new Image(), src: "assets/pixel-enemy-mooncap-witch-v2.png", crop: [18, 58, 366, 380] },
-    wolf: { image: new Image(), src: "assets/pixel-enemy-moon-wolf-v1.png", crop: [144, 180, 894, 842] },
-    shell: { image: new Image(), src: "assets/pixel-enemy-shell-toad-v1.png", crop: [83, 154, 946, 853] },
-    spitter: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png", crop: [28, 246, 943, 812] },
-    toxic: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png", crop: [28, 246, 943, 812] },
-    shaman: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png", crop: [64, 151, 1000, 868] },
-    priest: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png", crop: [64, 151, 1000, 868] },
-    jugger: { image: new Image(), src: "assets/pixel-enemy-iron-giant-v1.png", crop: [249, 69, 806, 910] },
-    wraith: { image: new Image(), src: "assets/pixel-enemy-mist-fox-v1.png", crop: [117, 181, 942, 825] },
-    king: { image: new Image(), src: "assets/pixel-enemy-thorn-king-v1.png", crop: [140, 132, 954, 843] },
-    nightlord: { image: new Image(), src: "assets/pixel-enemy-nightlord-v1.png", crop: [172, 128, 965, 873] },
+    moon_wolf: { image: new Image(), src: "assets/pixel-enemy-moon-wolf-v1.png", crop: [144, 180, 894, 842] },
+    moss_toad: { image: new Image(), src: "assets/pixel-enemy-shell-toad-v1.png", crop: [83, 154, 946, 853] },
+    burrow_mole: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png", crop: [28, 246, 943, 812] },
+    gloom_mole: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png", crop: [28, 246, 943, 812] },
+    thorn_elder: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png", crop: [64, 151, 1000, 868] },
+    thorn_bishop: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png", crop: [64, 151, 1000, 868] },
+    iron_colossus: { image: new Image(), src: "assets/pixel-enemy-iron-giant-v1.png", crop: [249, 69, 806, 910] },
+    mist_fox: { image: new Image(), src: "assets/pixel-enemy-mist-fox-v1.png", crop: [117, 181, 942, 825] },
+    thorn_king: { image: new Image(), src: "assets/pixel-enemy-thorn-king-v1.png", crop: [140, 132, 954, 843] },
+    dusk_lord: { image: new Image(), src: "assets/pixel-enemy-nightlord-v1.png", crop: [172, 128, 965, 873] },
   };
   const bindExtraSprite = (sprite, refreshUi) => {
     sprite.image.addEventListener("load", () => {
@@ -486,43 +486,51 @@
     wolf: {
       id: "wolf", name: "달빛늑대", hp: 320, damage: 46, speed: 72,
       range: 42, cooldown: 0.78, size: 60, reward: 64, kind: "wolf", sprite: 1,
+      tint: "hue-rotate(200deg) saturate(1.15) brightness(.88)",
     },
     brute: {
-      id: "brute", name: "돌갑옷 대장", hp: 860, damage: 84, speed: 25,
+      id: "brute", name: "골렘", hp: 860, damage: 84, speed: 25,
       range: 58, cooldown: 1.4, size: 84, reward: 145, kind: "brute", sprite: 2, cleave: 72,
     },
     shell: {
       id: "shell", name: "등껍질 두꺼비", hp: 980, damage: 52, speed: 16,
       range: 52, cooldown: 1.7, size: 90, reward: 160, kind: "shell", sprite: 2,
+      tint: "hue-rotate(80deg) saturate(.9) brightness(.85)",
     },
     spitter: {
       id: "spitter", name: "독침 두더지", hp: 430, damage: 48, speed: 30,
       range: 235, cooldown: 1.5, size: 61, reward: 72, kind: "spitter", sprite: 0,
       projectile: true, slow: 1.4, shot: "#8ad84d",
+      tint: "hue-rotate(40deg) saturate(1.4) brightness(.88)",
     },
     toxic: {
       id: "toxic", name: "맹독 두더지", hp: 520, damage: 68, speed: 27,
       range: 250, cooldown: 1.35, size: 63, reward: 92, kind: "toxic", sprite: 0,
       projectile: true, slow: 2.1, splash: 54, shot: "#c6ff4a",
+      tint: "hue-rotate(70deg) saturate(1.7) brightness(.8)",
     },
     shaman: {
       id: "shaman", name: "가시 주술사", hp: 690, damage: 32, speed: 24,
       range: 205, cooldown: 1.8, size: 70, reward: 110, kind: "shaman", sprite: 1,
       projectile: true, heal: 72, shot: "#d483f0",
+      tint: "hue-rotate(245deg) saturate(1.2) brightness(.9)",
     },
     priest: {
       id: "priest", name: "가시 사제", hp: 720, damage: 40, speed: 22,
       range: 220, cooldown: 1.65, size: 72, reward: 138, kind: "priest", sprite: 1,
       projectile: true, heal: 95, shot: "#f0a0ff",
+      tint: "hue-rotate(270deg) saturate(1.35) brightness(.95)",
     },
     jugger: {
       id: "jugger", name: "철갑 거인", hp: 1320, damage: 108, speed: 18,
       range: 64, cooldown: 1.55, size: 98, reward: 220, kind: "jugger", sprite: 2, cleave: 96,
+      tint: "hue-rotate(-20deg) saturate(.7) brightness(.75)",
     },
     wraith: {
       id: "wraith", name: "안개여우", hp: 480, damage: 72, speed: 66,
       range: 44, cooldown: 0.7, size: 58, reward: 96, kind: "wraith", sprite: 1,
       critChance: 0.22, critPower: 1.8,
+      tint: "hue-rotate(250deg) saturate(.6) brightness(1.25)",
     },
     boss: {
       id: "boss", name: "가시왕", hp: 2400, damage: 132, speed: 17,
@@ -531,10 +539,12 @@
     king: {
       id: "king", name: "가시대왕", hp: 3100, damage: 158, speed: 16,
       range: 80, cooldown: 1.5, size: 122, reward: 820, kind: "king", sprite: 3, cleave: 140, raid: true,
+      tint: "hue-rotate(-25deg) saturate(1.35) brightness(1.05)",
     },
     nightlord: {
       id: "nightlord", name: "달그림자 군주", hp: 3800, damage: 175, speed: 19,
       range: 86, cooldown: 1.42, size: 128, reward: 1100, kind: "nightlord", sprite: 3, cleave: 160, raid: true,
+      tint: "hue-rotate(210deg) saturate(1.2) brightness(.78)",
     },
     bloodwing_bat: {
       id: "bloodwing_bat", name: "흡혈박쥐", hp: 175, damage: 31, speed: 92,
@@ -554,6 +564,51 @@
       id: "mooncap_witch", name: "달버섯마녀", hp: 620, damage: 45, speed: 24,
       range: 225, cooldown: 1.72, size: 70, reward: 126, kind: "witch",
       projectile: true, heal: 80, slow: 1.6, shot: "#a8ef55",
+    },
+    moon_wolf: {
+      id: "moon_wolf", name: "월하늑대", hp: 340, damage: 50, speed: 70,
+      range: 44, cooldown: 0.76, size: 62, reward: 72, kind: "wolf",
+    },
+    moss_toad: {
+      id: "moss_toad", name: "습지두꺼비", hp: 1040, damage: 56, speed: 15,
+      range: 54, cooldown: 1.72, size: 92, reward: 172, kind: "shell",
+    },
+    burrow_mole: {
+      id: "burrow_mole", name: "땅굴두더지", hp: 450, damage: 52, speed: 29,
+      range: 240, cooldown: 1.48, size: 62, reward: 78, kind: "spitter",
+      projectile: true, slow: 1.5, shot: "#8ad84d",
+    },
+    gloom_mole: {
+      id: "gloom_mole", name: "안개두더지", hp: 540, damage: 72, speed: 26,
+      range: 255, cooldown: 1.32, size: 64, reward: 98, kind: "toxic",
+      projectile: true, slow: 2.2, splash: 56, shot: "#c6ff4a",
+    },
+    thorn_elder: {
+      id: "thorn_elder", name: "가시장로", hp: 720, damage: 36, speed: 23,
+      range: 210, cooldown: 1.76, size: 72, reward: 118, kind: "shaman",
+      projectile: true, heal: 78, shot: "#d483f0",
+    },
+    thorn_bishop: {
+      id: "thorn_bishop", name: "가시주교", hp: 760, damage: 44, speed: 21,
+      range: 226, cooldown: 1.6, size: 74, reward: 146, kind: "priest",
+      projectile: true, heal: 102, shot: "#f0a0ff",
+    },
+    iron_colossus: {
+      id: "iron_colossus", name: "무쇠거신", hp: 1480, damage: 116, speed: 17,
+      range: 66, cooldown: 1.58, size: 102, reward: 240, kind: "jugger", cleave: 102,
+    },
+    mist_fox: {
+      id: "mist_fox", name: "안개별", hp: 500, damage: 76, speed: 68,
+      range: 46, cooldown: 0.68, size: 60, reward: 104, kind: "wraith",
+      critChance: 0.24, critPower: 1.85,
+    },
+    thorn_king: {
+      id: "thorn_king", name: "가시왕자", hp: 2680, damage: 148, speed: 16,
+      range: 78, cooldown: 1.52, size: 118, reward: 700, kind: "king", cleave: 128,
+    },
+    dusk_lord: {
+      id: "dusk_lord", name: "달그림자 대군주", hp: 3400, damage: 168, speed: 18,
+      range: 84, cooldown: 1.44, size: 124, reward: 920, kind: "nightlord", cleave: 150,
     },
   };
 
@@ -753,13 +808,13 @@
     const part = Number(partText) || 1;
     const extraWeight = 0.1 + part * 0.018;
     const reinforcements = {
-      2: [["bloodwing_bat", extraWeight]],
-      3: [["bone_raven", extraWeight]],
-      4: [["bloodwing_bat", extraWeight * 0.65], ["bone_raven", extraWeight * 0.75]],
-      5: [["siege_rhino", extraWeight]],
-      6: [["mooncap_witch", extraWeight], ["bone_raven", extraWeight * 0.55]],
-      7: [["siege_rhino", extraWeight * 0.75], ["mooncap_witch", extraWeight * 0.8]],
-      8: [["bloodwing_bat", extraWeight * 0.45], ["siege_rhino", extraWeight * 0.7], ["mooncap_witch", extraWeight]],
+      2: [["bloodwing_bat", extraWeight], ["moon_wolf", extraWeight * 0.7]],
+      3: [["bone_raven", extraWeight], ["moss_toad", extraWeight * 0.7], ["burrow_mole", extraWeight * 0.65]],
+      4: [["bloodwing_bat", extraWeight * 0.65], ["bone_raven", extraWeight * 0.75], ["mist_fox", extraWeight * 0.8]],
+      5: [["siege_rhino", extraWeight], ["iron_colossus", extraWeight * 0.7], ["gloom_mole", extraWeight * 0.55]],
+      6: [["mooncap_witch", extraWeight], ["bone_raven", extraWeight * 0.55], ["thorn_elder", extraWeight * 0.7]],
+      7: [["siege_rhino", extraWeight * 0.75], ["mooncap_witch", extraWeight * 0.8], ["thorn_bishop", extraWeight * 0.65], ["iron_colossus", extraWeight * 0.5]],
+      8: [["bloodwing_bat", extraWeight * 0.45], ["siege_rhino", extraWeight * 0.7], ["mooncap_witch", extraWeight], ["thorn_king", extraWeight * 0.35], ["dusk_lord", extraWeight * 0.28]],
     }[chapter] || [];
     return [...stage.pool, ...reinforcements];
   }
@@ -1157,7 +1212,7 @@
       return;
     }
 
-    const hitDelay = actor.kind === "ram" || actor.kind === "titan" || actor.kind === "brute" || actor.kind === "jugger" || actor.raid ? 0.12 : 0.05;
+    const hitDelay = actor.kind === "ram" || actor.kind === "titan" || actor.kind === "brute" || actor.kind === "jugger" || actor.id === "iron_colossus" || actor.raid ? 0.12 : 0.05;
     slashEffect(actor);
     actor.pendingHit = {
       timer: hitDelay,
@@ -2613,46 +2668,6 @@
     ctx.restore();
   }
 
-  function fighterMotion(actor) {
-    const kind = actor.kind;
-    const id = actor.id;
-    const fly = kind === "bat" || kind === "raven" || kind === "frost" || kind === "knockback"
-      || id === "gale_hawk" || id === "frost_owl" || id === "bloodwing_bat" || id === "bone_raven";
-    const heavy = Boolean(actor.raid)
-      || ["titan", "brute", "jugger", "rhino", "shield", "shell", "boss", "king", "nightlord"].includes(kind);
-    const hoppy = ["scout", "moco", "assassin", "berserker", "swarm", "wolf", "wraith"].includes(kind);
-    const drummer = kind === "drummer";
-    const ranger = Boolean(actor.projectile);
-    const t = actor.age + actor.seed;
-    const spd = Math.max(16, actor.speed || 40);
-    const freq = fly ? 7.4 : hoppy ? 14.2 : heavy ? 5.1 : drummer ? 8.4 : 9.6;
-    const walk = actor.moving && !actor.dead ? Math.sin(t * freq * (spd / 48)) : 0;
-    const idle = Math.sin(t * (fly ? 3.6 : drummer ? 6.2 : 2.7));
-    const attackProgress = actor.attackAnim > 0 ? 1 - actor.attackAnim / actor.attackDuration : 0;
-    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
-    const hop = actor.dead
-      ? 0
-      : (fly
-        ? 11 + idle * 5.5 + Math.abs(walk) * 3
-        : actor.moving
-          ? Math.abs(walk) * (hoppy ? 9 : heavy ? 3.5 : drummer ? 6.5 : 5.5)
-          : (idle + 1) * (drummer ? 1.4 : 0.75));
-    const squashX = (actor.moving
-      ? 1 + Math.abs(walk) * (heavy ? 0.045 : 0.03) - (walk > 0.55 ? 0.05 : 0)
-      : 1 + idle * 0.012) * (1 + attack * (ranger ? 0.03 : 0.08));
-    const squashY = (actor.moving
-      ? 1 - Math.abs(walk) * (heavy ? 0.04 : fly ? 0.06 : 0.025) + (walk > 0.55 ? 0.05 : 0)
-      : fly ? 1 + Math.sin(t * 8.5) * 0.035 : 1 - idle * 0.01) * (1 + attack * (ranger ? -0.06 : -0.05));
-    const tilt = fly
-      ? walk * 0.05 + idle * 0.01
-      : actor.moving
-        ? walk * (heavy ? 0.012 : hoppy ? 0.038 : 0.024)
-        : idle * 0.006;
-    const lunge = attack * (ranger ? -9 : heavy ? 18 : hoppy ? 16 : 13) * actor.dir;
-    const trail = fly || hoppy ? Math.abs(walk) > 0.32 : Math.abs(walk) > 0.68;
-    return { walk, idle, attackProgress, attack, hop, squashX, squashY, tilt, lunge, trail, fly };
-  }
-
   function drawPixelFighter(actor) {
     const ally = actor.team === "ally";
     const extraAllySprite = ally ? EXTRA_ALLY_SPRITES[actor.id] : null;
@@ -2684,20 +2699,29 @@
     const sourceY = crop[1];
     const sourceW = crop[2] - crop[0];
     const sourceH = crop[3] - crop[1];
-    const motion = fighterMotion(actor);
+    const walk = actor.moving ? Math.sin(actor.age * actor.speed * 0.2 + actor.seed) : 0;
+    const idle = Math.sin(actor.age * 2.8 + actor.seed);
+    const attackProgress = actor.attackAnim > 0
+      ? 1 - actor.attackAnim / actor.attackDuration
+      : 0;
+    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
     const deathT = clamp(actor.death / 0.7, 0, 1);
     const drawH = Math.round(actor.size * (ally ? 3.45 : 3.35));
     const drawW = Math.round(drawH * sourceW / sourceH);
-    const jump = Math.round(motion.hop);
-    const lunge = Math.round(motion.lunge);
+    const jump = actor.dead ? 0 : Math.round(
+      actor.moving ? Math.abs(walk) * 5 : (idle + 1) * 0.7
+    );
+    const lunge = Math.round(attack * (actor.projectile ? -4 : 13) * actor.dir);
     const recoilDir = actor.team === "ally" ? -1 : 1;
     const recoilOffset = Math.round(recoilDir * actor.recoil * 38);
     const spawnScale = easeOut(actor.spawnAnim);
+    const bounce = actor.moving ? 1 + Math.abs(walk) * 0.03 : 1;
+    const bodyTilt = actor.moving ? walk * 0.02 : idle * 0.004;
 
     ctx.save();
     ctx.translate(Math.round(actor.x + lunge + recoilOffset), Math.round(actor.y - jump));
-    ctx.scale(spawnScale * motion.squashX, spawnScale * motion.squashY);
-    ctx.rotate(motion.tilt);
+    ctx.scale(spawnScale * bounce, spawnScale * bounce);
+    ctx.rotate(bodyTilt);
     ctx.globalAlpha = actor.dead ? 1 - deathT : 1;
     if (actor.dead) {
       ctx.translate(0, -drawH * 0.3);
@@ -2705,13 +2729,13 @@
     }
 
     pixelRect(-drawW * 0.38, 2 + jump, drawW * 0.76, 8, "rgba(21,30,24,.28)");
-    if (actor.moving && motion.trail) {
+    if (actor.moving && Math.abs(walk) > 0.68) {
       ctx.save();
-      ctx.globalAlpha = motion.fly ? 0.18 : 0.13;
+      ctx.globalAlpha = 0.13;
       ctx.drawImage(
         sheet,
         sourceX, sourceY, sourceW, sourceH,
-        Math.round(-drawW / 2 - 8 * actor.dir), Math.round(-drawH + (motion.fly ? 6 : 0)), drawW, drawH
+        Math.round(-drawW / 2 - 7), Math.round(-drawH), drawW, drawH
       );
       ctx.restore();
     }
@@ -2728,7 +2752,7 @@
     ctx.filter = "none";
 
     if (actor.attackAnim > 0 && actor.projectile) {
-      const charge = Math.sin(motion.attackProgress * Math.PI);
+      const charge = Math.sin(attackProgress * Math.PI);
       const front = drawW * 0.47;
       pixelRect(front - 4, -drawH * 0.63 - 4, 8, 8, actor.shot || (actor.kind === "mage" ? "#ffe26a" : "#a8ec73"));
       if (charge > 0.45) {
