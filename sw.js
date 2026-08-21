@@ -1,4 +1,4 @@
-const CACHE_NAME = "fur-frontline-offline-v3";
+const CACHE_NAME = "fur-frontline-offline-v5";
 const APP_SHELL = [
   "./", "./index.html", "./styles.css", "./game.js", "./firebase-config.js",
   "./firebase-save.js", "./pwa.js", "./manifest.webmanifest", "./assets/app-icon.svg",
@@ -8,10 +8,17 @@ const APP_SHELL = [
   "./assets/pixel-stage-ch6-palace-v1.png", "./assets/pixel-stage-ch7-fortress-v1.png",
   "./assets/pixel-stage-ch8-throne-v1.png", "./assets/pixel-allies-keyed.png",
   "./assets/pixel-allies-unlockables-v4.png", "./assets/pixel-ally-rockshield-v1.png",
-  "./assets/pixel-ally-lightning-otter-v1.png", "./assets/pixel-ally-gale-hawk-v2.png",
-  "./assets/pixel-ally-herb-hedgehog-v1.png", "./assets/pixel-enemies-keyed.png",
+  "./assets/pixel-ally-lightning-otter-v1.png", "./assets/pixel-ally-gale-hawk-v3.png",
+  "./assets/pixel-ally-herb-hedgehog-v1.png", "./assets/pixel-ally-squirrel-scout-v1.png",
+  "./assets/pixel-ally-bomber-v1.png", "./assets/pixel-ally-sniper-v1.png",
+  "./assets/pixel-ally-drummer-v1.png", "./assets/pixel-ally-scout-v1.png",
+  "./assets/pixel-enemies-keyed.png",
   "./assets/pixel-enemy-bloodwing-bat-v2.png", "./assets/pixel-enemy-bone-raven-v3.png",
-  "./assets/pixel-enemy-siege-rhino-v2.png", "./assets/pixel-enemy-mooncap-witch-v2.png"
+  "./assets/pixel-enemy-siege-rhino-v2.png", "./assets/pixel-enemy-mooncap-witch-v2.png",
+  "./assets/pixel-enemy-moon-wolf-v1.png", "./assets/pixel-enemy-shell-toad-v1.png",
+  "./assets/pixel-enemy-spitter-mole-v1.png", "./assets/pixel-enemy-thorn-shaman-v1.png",
+  "./assets/pixel-enemy-iron-giant-v1.png", "./assets/pixel-enemy-mist-fox-v1.png",
+  "./assets/pixel-enemy-thorn-king-v1.png", "./assets/pixel-enemy-nightlord-v1.png"
 ];
 
 self.addEventListener("install", (event) => {

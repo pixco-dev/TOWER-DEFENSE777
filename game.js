@@ -138,29 +138,44 @@
 
   const EXTRA_ALLY_SPRITES = {
     lightning_otter: { image: new Image(), src: "assets/pixel-ally-lightning-otter-v1.png", crop: [18, 107, 366, 380] },
-    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v2.png", crop: [18, 124, 366, 380] },
+    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v3.png", crop: [138, 158, 920, 789] },
     herb_hedgehog: { image: new Image(), src: "assets/pixel-ally-herb-hedgehog-v1.png", crop: [18, 106, 366, 380] },
+    squirrel_scout: { image: new Image(), src: "assets/pixel-ally-squirrel-scout-v1.png", crop: [135, 230, 933, 807] },
+    bomber: { image: new Image(), src: "assets/pixel-ally-bomber-v1.png", crop: [177, 163, 847, 848] },
+    sniper: { image: new Image(), src: "assets/pixel-ally-sniper-v1.png", crop: [198, 223, 812, 815] },
+    drummer: { image: new Image(), src: "assets/pixel-ally-drummer-v1.png", crop: [174, 120, 828, 826] },
+    scout: { image: new Image(), src: "assets/pixel-ally-scout-v1.png", crop: [263, 300, 736, 739] },
   };
   const EXTRA_ENEMY_SPRITES = {
     bloodwing_bat: { image: new Image(), src: "assets/pixel-enemy-bloodwing-bat-v2.png", crop: [18, 164, 366, 380] },
     bone_raven: { image: new Image(), src: "assets/pixel-enemy-bone-raven-v3.png", crop: [18, 109, 366, 380] },
     siege_rhino: { image: new Image(), src: "assets/pixel-enemy-siege-rhino-v2.png", crop: [18, 182, 366, 380] },
     mooncap_witch: { image: new Image(), src: "assets/pixel-enemy-mooncap-witch-v2.png", crop: [18, 58, 366, 380] },
+    wolf: { image: new Image(), src: "assets/pixel-enemy-moon-wolf-v1.png", crop: [144, 180, 894, 842] },
+    shell: { image: new Image(), src: "assets/pixel-enemy-shell-toad-v1.png", crop: [83, 154, 946, 853] },
+    spitter: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png", crop: [28, 246, 943, 812] },
+    toxic: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png", crop: [28, 246, 943, 812] },
+    shaman: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png", crop: [64, 151, 1000, 868] },
+    priest: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png", crop: [64, 151, 1000, 868] },
+    jugger: { image: new Image(), src: "assets/pixel-enemy-iron-giant-v1.png", crop: [249, 69, 806, 910] },
+    wraith: { image: new Image(), src: "assets/pixel-enemy-mist-fox-v1.png", crop: [117, 181, 942, 825] },
+    king: { image: new Image(), src: "assets/pixel-enemy-thorn-king-v1.png", crop: [140, 132, 954, 843] },
+    nightlord: { image: new Image(), src: "assets/pixel-enemy-nightlord-v1.png", crop: [172, 128, 965, 873] },
   };
-  for (const sprite of Object.values(EXTRA_ALLY_SPRITES)) {
+  const bindExtraSprite = (sprite, refreshUi) => {
     sprite.image.addEventListener("load", () => {
-      sprite.sheet = stripSpriteBackdrop(sprite.image);
-      renderCardPortraits();
-      renderDeckBuilder();
+      // PNGs are pre-keyed. Never strip interiors or dark fur/armor at runtime.
+      sprite.sheet = sprite.image;
+      if (refreshUi) {
+        renderCardPortraits();
+        renderDeckBuilder();
+      }
     });
     sprite.image.src = sprite.src;
-  }
-  for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) {
-    sprite.image.addEventListener("load", () => {
-      sprite.sheet = stripSpriteBackdrop(sprite.image);
-    });
-    sprite.image.src = sprite.src;
-  }
+    if (sprite.image.complete && sprite.image.naturalWidth) sprite.sheet = sprite.image;
+  };
+  for (const sprite of Object.values(EXTRA_ALLY_SPRITES)) bindExtraSprite(sprite, true);
+  for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) bindExtraSprite(sprite, false);
 
   const ALLY_CROPS = [
     [12, 345, 303, 675],
@@ -238,79 +253,59 @@
 
   function stripSpriteBackdrop(image) {
     try {
-    const surface = document.createElement("canvas");
-    surface.width = image.naturalWidth;
-    surface.height = image.naturalHeight;
-    const surfaceCtx = surface.getContext("2d", { willReadFrequently: true });
-    surfaceCtx.drawImage(image, 0, 0);
-    const frame = surfaceCtx.getImageData(0, 0, surface.width, surface.height);
-    const pixels = frame.data;
-    const width = surface.width;
-    const height = surface.height;
-    const total = width * height;
-    const light = new Uint8Array(total);
-    const density = new Uint16Array(total);
-    for (let index = 0; index < total; index++) {
-      const p = index * 4;
-      if (pixels[p + 3] < 250) continue;
-      const r = pixels[p];
-      const g = pixels[p + 1];
-      const b = pixels[p + 2];
-      const min = Math.min(r, g, b);
-      const max = Math.max(r, g, b);
-      if (min >= 200 && max - min < 14) light[index] = 1;
-    }
-    for (let index = 0; index < total; index++) {
-      if (!light[index]) continue;
-      const x = index % width;
-      const y = (index / width) | 0;
-      let count = 0;
-      for (let oy = -2; oy <= 2; oy++) {
-        const ny = y + oy;
-        if (ny < 0 || ny >= height) continue;
-        for (let ox = -2; ox <= 2; ox++) {
-          const nx = x + ox;
-          if (nx < 0 || nx >= width) continue;
-          count += light[ny * width + nx];
-        }
-      }
-      density[index] = count;
-    }
-    for (let index = 0; index < total; index++) {
-      if (light[index] && density[index] >= 8) pixels[index * 4 + 3] = 0;
-    }
-    const visited = new Uint8Array(total);
-    const queue = new Int32Array(total);
-    let head = 0;
-    let tail = 0;
-    const enqueue = (index) => {
-      if (index < 0 || index >= total || visited[index]) return;
-      const p = index * 4;
-      const alpha = pixels[p + 3];
-      const max = Math.max(pixels[p], pixels[p + 1], pixels[p + 2]);
-      if (alpha < 8 || max <= 16) {
+      const surface = document.createElement("canvas");
+      surface.width = image.naturalWidth;
+      surface.height = image.naturalHeight;
+      const surfaceCtx = surface.getContext("2d", { willReadFrequently: true });
+      surfaceCtx.drawImage(image, 0, 0);
+      const frame = surfaceCtx.getImageData(0, 0, surface.width, surface.height);
+      const pixels = frame.data;
+      const width = surface.width;
+      const height = surface.height;
+      const total = width * height;
+      const visited = new Uint8Array(total);
+      const queue = new Int32Array(total);
+      let head = 0;
+      let tail = 0;
+      const isBackdrop = (index) => {
+        const p = index * 4;
+        const a = pixels[p + 3];
+        if (a < 12) return true;
+        const r = pixels[p];
+        const g = pixels[p + 1];
+        const b = pixels[p + 2];
+        const min = Math.min(r, g, b);
+        const max = Math.max(r, g, b);
+        const magenta = r >= 180 && b >= 180 && g <= 90 && r - g >= 80 && b - g >= 80;
+        const nearWhite = min >= 232 && max - min < 14;
+        return magenta || nearWhite;
+      };
+      const enqueue = (index) => {
+        if (index < 0 || index >= total || visited[index] || !isBackdrop(index)) return;
         visited[index] = 1;
         queue[tail++] = index;
+      };
+      for (let x = 0; x < width; x++) {
+        enqueue(x);
+        enqueue((height - 1) * width + x);
       }
-    };
-    for (let index = 0; index < total; index++) {
-      if (pixels[index * 4 + 3] < 8) enqueue(index);
-    }
-    while (head < tail) {
-      const index = queue[head++];
-      const x = index % width;
-      if (x > 0) enqueue(index - 1);
-      if (x < width - 1) enqueue(index + 1);
-      if (index >= width) enqueue(index - width);
-      if (index < total - width) enqueue(index + width);
-    }
-    for (let index = 0; index < total; index++) {
-      if (visited[index] && Math.max(pixels[index * 4], pixels[index * 4 + 1], pixels[index * 4 + 2]) <= 16) {
-        pixels[index * 4 + 3] = 0;
+      for (let y = 0; y < height; y++) {
+        enqueue(y * width);
+        enqueue(y * width + width - 1);
       }
-    }
-    surfaceCtx.putImageData(frame, 0, 0);
-    return surface;
+      while (head < tail) {
+        const index = queue[head++];
+        const x = index % width;
+        if (x > 0) enqueue(index - 1);
+        if (x < width - 1) enqueue(index + 1);
+        if (index >= width) enqueue(index - width);
+        if (index < total - width) enqueue(index + width);
+      }
+      for (let index = 0; index < total; index++) {
+        if (visited[index]) pixels[index * 4 + 3] = 0;
+      }
+      surfaceCtx.putImageData(frame, 0, 0);
+      return surface;
     } catch (error) {
       return image;
     }
@@ -368,35 +363,30 @@
       id: "bomber", name: "폭죽술사", cost: 390, hp: 260, damage: 88,
       speed: 33, range: 185, cooldown: 1.85, size: 62, recharge: 10.2, kind: "bomber",
       projectile: true, splash: 118, unlockable: true, sprite: 4, shot: "#ff8a4a",
-      tint: "hue-rotate(-40deg) saturate(1.5) brightness(1.05)", overlay: "rgba(255, 120, 64, .28)",
       info: "넓은 폭발을 일으키는 화공 유닛",
     },
     {
       id: "sniper", name: "달그림자", cost: 520, hp: 170, damage: 210,
       speed: 26, range: 340, cooldown: 2.55, size: 56, recharge: 13.5, kind: "sniper",
       projectile: true, critChance: 0.22, critPower: 1.9, unlockable: true, sprite: 2, shot: "#d7e7ff",
-      tint: "grayscale(.15) contrast(1.2) brightness(.92)", overlay: "rgba(210, 220, 240, .22)",
       info: "아주 멀리서 한 발을 꽂는 저격수",
     },
     {
       id: "titan", name: "바위방패", cost: 560, hp: 1280, damage: 110,
       speed: 21, range: 52, cooldown: 1.55, size: 86, recharge: 14, kind: "titan",
       unlockable: true, sprite: 3, cleave: 96, guard: true,
-      tint: "hue-rotate(28deg) saturate(.85) brightness(.9)", overlay: "rgba(150, 140, 120, .3)",
       info: "느리고 단단한 최전선 거인",
     },
     {
       id: "drummer", name: "진군북", cost: 280, hp: 580, damage: 52,
       speed: 38, range: 48, cooldown: 0.95, size: 66, recharge: 6.8, kind: "drummer",
       unlockable: true, sprite: 1, aura: 1.32,
-      tint: "hue-rotate(95deg) saturate(1.2) brightness(1.05)", overlay: "rgba(90, 210, 130, .26)",
       info: "북소리로 주변 아군 공격·공속·이동을 강화한다",
     },
     {
       id: "scout", name: "정찰냥", cost: 70, hp: 95, damage: 14,
       speed: 84, range: 34, cooldown: 0.48, size: 48, recharge: 1.6, kind: "scout",
       unlockable: true, sprite: 0,
-      tint: "hue-rotate(40deg) saturate(1.1) brightness(1.15)", overlay: "rgba(255, 230, 120, .24)",
       info: "값싸고 빠른 정찰 돌격대",
     },
     {
@@ -496,7 +486,6 @@
     wolf: {
       id: "wolf", name: "달빛늑대", hp: 320, damage: 46, speed: 72,
       range: 42, cooldown: 0.78, size: 60, reward: 64, kind: "wolf", sprite: 1,
-      tint: "hue-rotate(200deg) saturate(1.15) brightness(.88)",
     },
     brute: {
       id: "brute", name: "돌갑옷 대장", hp: 860, damage: 84, speed: 25,
@@ -505,42 +494,35 @@
     shell: {
       id: "shell", name: "등껍질 두꺼비", hp: 980, damage: 52, speed: 16,
       range: 52, cooldown: 1.7, size: 90, reward: 160, kind: "shell", sprite: 2,
-      tint: "hue-rotate(80deg) saturate(.9) brightness(.85)",
     },
     spitter: {
       id: "spitter", name: "독침 두더지", hp: 430, damage: 48, speed: 30,
       range: 235, cooldown: 1.5, size: 61, reward: 72, kind: "spitter", sprite: 0,
       projectile: true, slow: 1.4, shot: "#8ad84d",
-      tint: "hue-rotate(40deg) saturate(1.4) brightness(.88)",
     },
     toxic: {
       id: "toxic", name: "맹독 두더지", hp: 520, damage: 68, speed: 27,
       range: 250, cooldown: 1.35, size: 63, reward: 92, kind: "toxic", sprite: 0,
       projectile: true, slow: 2.1, splash: 54, shot: "#c6ff4a",
-      tint: "hue-rotate(70deg) saturate(1.7) brightness(.8)",
     },
     shaman: {
       id: "shaman", name: "가시 주술사", hp: 690, damage: 32, speed: 24,
       range: 205, cooldown: 1.8, size: 70, reward: 110, kind: "shaman", sprite: 1,
       projectile: true, heal: 72, shot: "#d483f0",
-      tint: "hue-rotate(245deg) saturate(1.2) brightness(.9)",
     },
     priest: {
       id: "priest", name: "가시 사제", hp: 720, damage: 40, speed: 22,
       range: 220, cooldown: 1.65, size: 72, reward: 138, kind: "priest", sprite: 1,
       projectile: true, heal: 95, shot: "#f0a0ff",
-      tint: "hue-rotate(270deg) saturate(1.35) brightness(.95)",
     },
     jugger: {
       id: "jugger", name: "철갑 거인", hp: 1320, damage: 108, speed: 18,
       range: 64, cooldown: 1.55, size: 98, reward: 220, kind: "jugger", sprite: 2, cleave: 96,
-      tint: "hue-rotate(-20deg) saturate(.7) brightness(.75)",
     },
     wraith: {
       id: "wraith", name: "안개여우", hp: 480, damage: 72, speed: 66,
       range: 44, cooldown: 0.7, size: 58, reward: 96, kind: "wraith", sprite: 1,
       critChance: 0.22, critPower: 1.8,
-      tint: "hue-rotate(250deg) saturate(.6) brightness(1.25)",
     },
     boss: {
       id: "boss", name: "가시왕", hp: 2400, damage: 132, speed: 17,
@@ -549,12 +531,10 @@
     king: {
       id: "king", name: "가시대왕", hp: 3100, damage: 158, speed: 16,
       range: 80, cooldown: 1.5, size: 122, reward: 820, kind: "king", sprite: 3, cleave: 140, raid: true,
-      tint: "hue-rotate(-25deg) saturate(1.35) brightness(1.05)",
     },
     nightlord: {
       id: "nightlord", name: "달그림자 군주", hp: 3800, damage: 175, speed: 19,
       range: 86, cooldown: 1.42, size: 128, reward: 1100, kind: "nightlord", sprite: 3, cleave: 160, raid: true,
-      tint: "hue-rotate(210deg) saturate(1.2) brightness(.78)",
     },
     bloodwing_bat: {
       id: "bloodwing_bat", name: "흡혈박쥐", hp: 175, damage: 31, speed: 92,
@@ -786,20 +766,14 @@
 
   const INITIAL_PREP_TIME = 8;
 
-  function buildWaveQueues(stage) {
-    const waveCount = stage.waves || 3;
-    const baseCount = Math.floor(stage.count / waveCount);
-    let remainder = stage.count % waveCount;
-    const waves = [];
+  function buildEndlessWave(stage, waveNumber) {
+    const baseCount = Math.max(3, Math.ceil(stage.count / (stage.waves || 3)));
+    const count = Math.min(baseCount + Math.floor((waveNumber - 1) / 2), baseCount + 8);
     const pool = stageEnemyPool(stage);
-    for (let wave = 0; wave < waveCount; wave++) {
-      const count = baseCount + (remainder-- > 0 ? 1 : 0);
-      const queue = [];
-      for (let i = 0; i < count; i++) queue.push(pickFromPool(pool));
-      waves.push(queue);
-    }
-    if (stage.boss) waves[waveCount - 1].push(stage.boss);
-    return waves;
+    const queue = [];
+    for (let i = 0; i < count; i++) queue.push(pickFromPool(pool));
+    if (stage.boss && waveNumber % 5 === 0) queue.push(stage.boss);
+    return queue;
   }
 
   const state = {
@@ -968,10 +942,13 @@
     const hpScale = scale <= 1.55 ? scale : 1.55 + (scale - 1.55) * 0.32;
     const dmgScale = 1 + Math.max(0, scale - 1) * 0.12;
     const pressure = 1 + state.dangerLevel * 0.04;
+    const late = clamp((scale - 1.15) / 1.27, 0, 1);
+    const hpMult = 1.08 * (1 + late * 0.39);
+    const dmgMult = 1.06 * (1 + late * 0.132);
     const type = {
       ...base,
-      hp: Math.round(base.hp * hpScale * pressure * 1.08),
-      damage: Math.round(base.damage * dmgScale * pressure * 1.06),
+      hp: Math.round(base.hp * hpScale * pressure * hpMult),
+      damage: Math.round(base.damage * dmgScale * pressure * dmgMult),
       speed: base.speed * (1 + state.dangerLevel * 0.03),
     };
     const enemy = makeFighter(type, "enemy");
@@ -987,32 +964,35 @@
   }
 
   function updateSpawning(dt) {
-    if (!state.spawnQueue.length && state.waveQueues.length) {
+    if (!state.spawnQueue.length) {
       if (!state.waveWaiting) {
         state.waveWaiting = true;
-        state.waveBreak = Math.max(1.8, 2.8 - state.stageIndex * 0.06);
-        const supply = 55 + state.waveIndex * 20;
-        state.money = Math.min(state.maxMoney, state.money + supply);
-        showMessage(`다음 공세 접근 · 긴급 보급 +${supply}G`, 1.8);
-        sound("upgrade");
+        const earlyRest = state.stageIndex < 10 ? 2.2 : (state.stageIndex < 20 ? 1 : 0);
+        state.waveBreak = Math.max(3.2, 4.2 + earlyRest - state.stageIndex * 0.045);
+        if (state.waveIndex > 0) {
+          const supply = 55 + state.waveIndex * 20;
+          state.money = Math.min(state.maxMoney, state.money + supply);
+          showMessage(`다음 공세 접근 · 긴급 보급 +${supply}G`, 1.8);
+          sound("upgrade");
+        }
       }
       state.waveBreak -= dt;
       if (state.waveBreak <= 0) {
         state.waveWaiting = false;
         state.waveIndex += 1;
-        state.spawnQueue = state.waveQueues.shift();
+        state.spawnQueue = buildEndlessWave(currentStage(), state.waveIndex);
         state.spawnTimer = 0.45;
         showMessage(`WAVE ${state.waveIndex} 시작!`, 1.6);
       }
       return;
     }
-    if (!state.spawnQueue.length) return;
     state.spawnTimer -= dt;
     if (state.spawnTimer <= 0) {
       const kind = state.spawnQueue.shift();
       spawnEnemy(kind);
       state.spawnedCount += 1;
-      const waveRush = 1 - (state.waveIndex - 1) * 0.1;
+      const rushStep = state.stageIndex < 10 ? 0.04 : 0.065;
+      const waveRush = Math.max(0.78, 1 - (state.waveIndex - 1) * rushStep);
       state.spawnTimer = currentStage().pace * waveRush * rand(0.72, 1.04);
     }
   }
@@ -1599,8 +1579,6 @@
 
   function reset() {
     const stage = currentStage();
-    const waves = buildWaveQueues(stage);
-    const totalEnemies = waves.reduce((sum, wave) => sum + wave.length, 0);
     Object.assign(state, {
       mode: "playing",
       paused: false,
@@ -1625,12 +1603,12 @@
       spawnTimer: 0,
       spawnIndex: 0,
       spawnQueue: [],
-      waveQueues: waves,
+      waveQueues: [],
       waveIndex: 0,
-      waveTotal: waves.length,
+      waveTotal: 0,
       waveBreak: INITIAL_PREP_TIME,
       waveWaiting: true,
-      totalEnemies,
+      totalEnemies: Infinity,
       spawnedCount: 0,
       kills: 0,
       combo: 0,
@@ -1677,7 +1655,7 @@
     updateFighters(dt);
     updateProjectiles(dt);
     updateEffects(dt);
-    if (!state.spawnQueue.length && !state.waveQueues.length && !state.waveWaiting && !state.enemies.some((e) => !e.dead) && state.enemyHp > 0 && !state.castleHint) {
+    if (Number.isFinite(state.totalEnemies) && !state.spawnQueue.length && !state.waveQueues.length && !state.waveWaiting && !state.enemies.some((e) => !e.dead) && state.enemyHp > 0 && !state.castleHint) {
       state.castleHint = true;
       showMessage("남은 적은 없습니다. 성채를 부수세요!", 2.2);
     }
@@ -1696,13 +1674,10 @@
     const stage = currentStage();
     ui.stageLabel.textContent = stage.id;
     ui.stageName.textContent = stage.name;
-    const laterWaves = state.waveQueues.reduce((sum, wave) => sum + wave.length, 0);
-    const alive = state.enemies.filter((e) => !e.dead).length;
-    const remaining = state.spawnQueue.length + laterWaves + alive;
-    ui.stageProgress.textContent = `적 ${remaining} / ${state.totalEnemies}`;
+    ui.stageProgress.textContent = `처치 ${state.kills}`;
     ui.waveLabel.textContent = state.waveWaiting
       ? `${state.waveIndex === 0 ? "준비" : "대기"} ${Math.max(0, Math.ceil(state.waveBreak))}초`
-      : `WAVE ${state.waveIndex} / ${state.waveTotal}`;
+      : `WAVE ${state.waveIndex} · 무한`;
     ui.workerLevel.textContent = `Lv.${state.worker}`;
     ui.workerCost.textContent = state.worker >= 8 ? "MAX" : `${workerCost()} G`;
     ui.workerBtn.disabled = state.worker >= 8 || state.money < workerCost() || state.mode !== "playing";
@@ -2638,6 +2613,46 @@
     ctx.restore();
   }
 
+  function fighterMotion(actor) {
+    const kind = actor.kind;
+    const id = actor.id;
+    const fly = kind === "bat" || kind === "raven" || kind === "frost" || kind === "knockback"
+      || id === "gale_hawk" || id === "frost_owl" || id === "bloodwing_bat" || id === "bone_raven";
+    const heavy = Boolean(actor.raid)
+      || ["titan", "brute", "jugger", "rhino", "shield", "shell", "boss", "king", "nightlord"].includes(kind);
+    const hoppy = ["scout", "moco", "assassin", "berserker", "swarm", "wolf", "wraith"].includes(kind);
+    const drummer = kind === "drummer";
+    const ranger = Boolean(actor.projectile);
+    const t = actor.age + actor.seed;
+    const spd = Math.max(16, actor.speed || 40);
+    const freq = fly ? 7.4 : hoppy ? 14.2 : heavy ? 5.1 : drummer ? 8.4 : 9.6;
+    const walk = actor.moving && !actor.dead ? Math.sin(t * freq * (spd / 48)) : 0;
+    const idle = Math.sin(t * (fly ? 3.6 : drummer ? 6.2 : 2.7));
+    const attackProgress = actor.attackAnim > 0 ? 1 - actor.attackAnim / actor.attackDuration : 0;
+    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
+    const hop = actor.dead
+      ? 0
+      : (fly
+        ? 11 + idle * 5.5 + Math.abs(walk) * 3
+        : actor.moving
+          ? Math.abs(walk) * (hoppy ? 9 : heavy ? 3.5 : drummer ? 6.5 : 5.5)
+          : (idle + 1) * (drummer ? 1.4 : 0.75));
+    const squashX = (actor.moving
+      ? 1 + Math.abs(walk) * (heavy ? 0.045 : 0.03) - (walk > 0.55 ? 0.05 : 0)
+      : 1 + idle * 0.012) * (1 + attack * (ranger ? 0.03 : 0.08));
+    const squashY = (actor.moving
+      ? 1 - Math.abs(walk) * (heavy ? 0.04 : fly ? 0.06 : 0.025) + (walk > 0.55 ? 0.05 : 0)
+      : fly ? 1 + Math.sin(t * 8.5) * 0.035 : 1 - idle * 0.01) * (1 + attack * (ranger ? -0.06 : -0.05));
+    const tilt = fly
+      ? walk * 0.05 + idle * 0.01
+      : actor.moving
+        ? walk * (heavy ? 0.012 : hoppy ? 0.038 : 0.024)
+        : idle * 0.006;
+    const lunge = attack * (ranger ? -9 : heavy ? 18 : hoppy ? 16 : 13) * actor.dir;
+    const trail = fly || hoppy ? Math.abs(walk) > 0.32 : Math.abs(walk) > 0.68;
+    return { walk, idle, attackProgress, attack, hop, squashX, squashY, tilt, lunge, trail, fly };
+  }
+
   function drawPixelFighter(actor) {
     const ally = actor.team === "ally";
     const extraAllySprite = ally ? EXTRA_ALLY_SPRITES[actor.id] : null;
@@ -2669,29 +2684,20 @@
     const sourceY = crop[1];
     const sourceW = crop[2] - crop[0];
     const sourceH = crop[3] - crop[1];
-    const walk = actor.moving ? Math.sin(actor.age * actor.speed * 0.2 + actor.seed) : 0;
-    const idle = Math.sin(actor.age * 2.8 + actor.seed);
-    const attackProgress = actor.attackAnim > 0
-      ? 1 - actor.attackAnim / actor.attackDuration
-      : 0;
-    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
+    const motion = fighterMotion(actor);
     const deathT = clamp(actor.death / 0.7, 0, 1);
     const drawH = Math.round(actor.size * (ally ? 3.45 : 3.35));
     const drawW = Math.round(drawH * sourceW / sourceH);
-    const jump = actor.dead ? 0 : Math.round(
-      actor.moving ? Math.abs(walk) * 5 : (idle + 1) * 0.7
-    );
-    const lunge = Math.round(attack * (actor.projectile ? -4 : 13) * actor.dir);
+    const jump = Math.round(motion.hop);
+    const lunge = Math.round(motion.lunge);
     const recoilDir = actor.team === "ally" ? -1 : 1;
     const recoilOffset = Math.round(recoilDir * actor.recoil * 38);
     const spawnScale = easeOut(actor.spawnAnim);
-    const bounce = actor.moving ? 1 + Math.abs(walk) * 0.03 : 1;
-    const bodyTilt = actor.moving ? walk * 0.02 : idle * 0.004;
 
     ctx.save();
     ctx.translate(Math.round(actor.x + lunge + recoilOffset), Math.round(actor.y - jump));
-    ctx.scale(spawnScale * bounce, spawnScale * bounce);
-    ctx.rotate(bodyTilt);
+    ctx.scale(spawnScale * motion.squashX, spawnScale * motion.squashY);
+    ctx.rotate(motion.tilt);
     ctx.globalAlpha = actor.dead ? 1 - deathT : 1;
     if (actor.dead) {
       ctx.translate(0, -drawH * 0.3);
@@ -2699,13 +2705,13 @@
     }
 
     pixelRect(-drawW * 0.38, 2 + jump, drawW * 0.76, 8, "rgba(21,30,24,.28)");
-    if (actor.moving && Math.abs(walk) > 0.68) {
+    if (actor.moving && motion.trail) {
       ctx.save();
-      ctx.globalAlpha = 0.13;
+      ctx.globalAlpha = motion.fly ? 0.18 : 0.13;
       ctx.drawImage(
         sheet,
         sourceX, sourceY, sourceW, sourceH,
-        Math.round(-drawW / 2 - 7), Math.round(-drawH), drawW, drawH
+        Math.round(-drawW / 2 - 8 * actor.dir), Math.round(-drawH + (motion.fly ? 6 : 0)), drawW, drawH
       );
       ctx.restore();
     }
@@ -2722,7 +2728,7 @@
     ctx.filter = "none";
 
     if (actor.attackAnim > 0 && actor.projectile) {
-      const charge = Math.sin(attackProgress * Math.PI);
+      const charge = Math.sin(motion.attackProgress * Math.PI);
       const front = drawW * 0.47;
       pixelRect(front - 4, -drawH * 0.63 - 4, 8, 8, actor.shot || (actor.kind === "mage" ? "#ffe26a" : "#a8ec73"));
       if (charge > 0.45) {
