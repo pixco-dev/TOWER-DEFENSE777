@@ -1,4 +1,4 @@
-const CACHE_NAME = "fur-frontline-offline-rift-v46";
+const CACHE_NAME = "fur-frontline-offline-rift-v47";
 const APP_SHELL = [
   "./", "./index.html", "./styles.css", "./game.js", "./rift-roster.js", "./firebase-config.js",
   "./firebase-save.js", "./pwa.js", "./manifest.webmanifest", "./assets/app-icon.svg",
@@ -14,8 +14,8 @@ const APP_SHELL = [
   "./assets/pixel-ally-drummer-v1.png", "./assets/pixel-ally-scout-v1.png",
   "./assets/pixel-ally-night-fox-v2.png", "./assets/pixel-ally-frost-owl-v1.png",
   "./assets/pixel-enemies-keyed.png",
-  "./assets/pixel-enemy-bloodwing-bat-v2.png", "./assets/pixel-enemy-bone-raven-v3.png",
-  "./assets/pixel-enemy-siege-rhino-v2.png", "./assets/pixel-enemy-mooncap-witch-v2.png",
+  "./assets/pixel-enemy-bloodwing-bat-v3.png", "./assets/pixel-enemy-bone-raven-v3.png",
+  "./assets/pixel-enemy-siege-rhino-v3.png", "./assets/pixel-enemy-mooncap-witch-v3.png",
   "./assets/pixel-enemy-moon-wolf-v1.png", "./assets/pixel-enemy-shell-toad-v1.png",
   "./assets/pixel-enemy-spitter-mole-v1.png", "./assets/pixel-enemy-thorn-shaman-v1.png",
   "./assets/pixel-enemy-iron-giant-v1.png", "./assets/pixel-enemy-mist-fox-v1.png",

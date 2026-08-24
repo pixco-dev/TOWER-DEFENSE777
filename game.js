@@ -154,20 +154,20 @@
   stageBackgrounds.forEach((image, index) => {
     image.src = STAGE_BACKGROUND_FILES[index];
   });
-  allySheet.src = "assets/pixel-allies-keyed.png";
+  allySheet.src = "assets/pixel-allies-keyed.png?v=2";
   unlockableSheet.src = "assets/pixel-allies-unlockables-v4.png";
-  rockShieldSheet.src = "assets/pixel-ally-rockshield-v1.png";
-  enemySheet.src = "assets/pixel-enemies-keyed.png";
+  rockShieldSheet.src = "assets/pixel-ally-rockshield-v1.png?v=2";
+  enemySheet.src = "assets/pixel-enemies-keyed.png?v=2";
 
   const EXTRA_ALLY_SPRITES = {
-    lightning_otter: { image: new Image(), src: "assets/pixel-ally-lightning-otter-v1.png", crop: [18, 107, 366, 380] },
-    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v3.png", crop: [138, 158, 920, 789] },
-    herb_hedgehog: { image: new Image(), src: "assets/pixel-ally-herb-hedgehog-v1.png", crop: [18, 106, 366, 380] },
-    squirrel_scout: { image: new Image(), src: "assets/pixel-ally-squirrel-scout-v1.png", crop: [135, 230, 933, 807] },
-    bomber: { image: new Image(), src: "assets/pixel-ally-bomber-v1.png", crop: [177, 163, 847, 848] },
-    sniper: { image: new Image(), src: "assets/pixel-ally-sniper-v1.png", crop: [198, 223, 812, 815] },
-    drummer: { image: new Image(), src: "assets/pixel-ally-drummer-v1.png", crop: [174, 120, 828, 826] },
-    scout: { image: new Image(), src: "assets/pixel-ally-scout-v1.png", crop: [263, 300, 736, 739] },
+    lightning_otter: { image: new Image(), src: "assets/pixel-ally-lightning-otter-v1.png?v=2", crop: [18, 107, 366, 380] },
+    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v3.png?v=2", crop: [138, 158, 920, 789] },
+    herb_hedgehog: { image: new Image(), src: "assets/pixel-ally-herb-hedgehog-v1.png?v=2", crop: [18, 106, 366, 380] },
+    squirrel_scout: { image: new Image(), src: "assets/pixel-ally-squirrel-scout-v1.png?v=2", crop: [135, 230, 933, 807] },
+    bomber: { image: new Image(), src: "assets/pixel-ally-bomber-v1.png?v=2", crop: [177, 163, 847, 848] },
+    sniper: { image: new Image(), src: "assets/pixel-ally-sniper-v1.png?v=2", crop: [198, 223, 812, 815] },
+    drummer: { image: new Image(), src: "assets/pixel-ally-drummer-v1.png?v=2", crop: [174, 120, 828, 826] },
+    scout: { image: new Image(), src: "assets/pixel-ally-scout-v1.png?v=2", crop: [263, 300, 736, 739] },
   };
   // 월울프 PNG는 늑대 계열에만. 여우/송곳니는 mist_fox, 주술사는 본편 시트.
   const SOLID_WOLF_CROP = [200, 210, 835, 810];
@@ -181,36 +181,36 @@
   });
   const makeMistFox = () => ({
     image: new Image(),
-    src: "assets/pixel-enemy-mist-fox-v1.png?v=2",
+    src: "assets/pixel-enemy-mist-fox-v1.png?v=3",
     crop: [117, 181, 942, 825],
     fitScale: 1.05,
     allowTint: true,
   });
   const EXTRA_ENEMY_SPRITES = {
-    bloodwing_bat: { image: new Image(), src: "assets/pixel-enemy-bloodwing-bat-v2.png?v=5", crop: [22, 170, 360, 374], fitScale: 0.92 },
+    bloodwing_bat: { image: new Image(), src: "assets/pixel-enemy-bloodwing-bat-v3.png?v=1", crop: [18, 168, 366, 380], fitScale: 0.92 },
     bone_raven: { image: new Image(), src: "assets/pixel-enemy-bone-raven-v3.png", crop: [18, 109, 366, 380] },
-    siege_rhino: { image: new Image(), src: "assets/pixel-enemy-siege-rhino-v2.png", crop: [18, 182, 366, 380] },
-    mooncap_witch: { image: new Image(), src: "assets/pixel-enemy-mooncap-witch-v2.png", crop: [18, 58, 366, 380] },
+    siege_rhino: { image: new Image(), src: "assets/pixel-enemy-siege-rhino-v3.png?v=1", crop: [18, 182, 366, 380] },
+    mooncap_witch: { image: new Image(), src: "assets/pixel-enemy-mooncap-witch-v3.png?v=1", crop: [18, 58, 366, 380] },
     fang: makeMistFox(),
     wolf: makeSolidWolf(),
     moon_wolf: makeSolidWolf(),
     wraith: makeMistFox(),
     shadow_bat: {
       image: new Image(),
-      src: "assets/pixel-enemy-bloodwing-bat-v2.png?v=5",
-      crop: [22, 170, 360, 374],
+      src: "assets/pixel-enemy-bloodwing-bat-v3.png?v=1",
+      crop: [18, 168, 366, 380],
       fitScale: 0.88,
       allowTint: true,
     },
-    moss_toad: { image: new Image(), src: "assets/pixel-enemy-shell-toad-v1.png", crop: [83, 154, 946, 853] },
-    burrow_mole: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png", crop: [28, 246, 943, 812] },
-    gloom_mole: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png", crop: [28, 246, 943, 812] },
-    thorn_elder: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png", crop: [64, 151, 1000, 868] },
-    thorn_bishop: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png", crop: [64, 151, 1000, 868] },
-    iron_colossus: { image: new Image(), src: "assets/pixel-enemy-iron-giant-v1.png", crop: [249, 69, 806, 910] },
-    mist_fox: { image: new Image(), src: "assets/pixel-enemy-mist-fox-v1.png?v=2", crop: [117, 181, 942, 825] },
-    thorn_king: { image: new Image(), src: "assets/pixel-enemy-thorn-king-v1.png", crop: [140, 132, 954, 843] },
-    dusk_lord: { image: new Image(), src: "assets/pixel-enemy-nightlord-v1.png", crop: [172, 128, 965, 873] },
+    moss_toad: { image: new Image(), src: "assets/pixel-enemy-shell-toad-v1.png?v=2", crop: [83, 154, 946, 853] },
+    burrow_mole: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png?v=2", crop: [28, 246, 943, 812] },
+    gloom_mole: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png?v=2", crop: [28, 246, 943, 812] },
+    thorn_elder: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png?v=2", crop: [64, 151, 1000, 868] },
+    thorn_bishop: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png?v=2", crop: [64, 151, 1000, 868] },
+    iron_colossus: { image: new Image(), src: "assets/pixel-enemy-iron-giant-v1.png?v=2", crop: [249, 69, 806, 910] },
+    mist_fox: { image: new Image(), src: "assets/pixel-enemy-mist-fox-v1.png?v=3", crop: [117, 181, 942, 825] },
+    thorn_king: { image: new Image(), src: "assets/pixel-enemy-thorn-king-v1.png?v=2", crop: [140, 132, 954, 843] },
+    dusk_lord: { image: new Image(), src: "assets/pixel-enemy-nightlord-v1.png?v=2", crop: [172, 128, 965, 873] },
   };
   const bindExtraSprite = (sprite, refreshUi) => {
     sprite.image.addEventListener("load", () => {
@@ -1179,7 +1179,7 @@
     const part = Number(partText) || 1;
     const extraWeight = 0.1 + part * 0.018;
     const reinforcements = {
-      2: [["bone_raven", extraWeight], ["spike_boar", extraWeight * 0.8], ["moss_toad", extraWeight * 0.55]],
+      2: [["bone_raven", extraWeight], ["bloodwing_bat", extraWeight * 0.8], ["moss_toad", extraWeight * 0.55]],
       3: [["bone_raven", extraWeight], ["moss_toad", extraWeight * 0.7], ["burrow_mole", extraWeight * 0.65]],
       4: [["mist_fox", extraWeight * 0.8], ["bone_raven", extraWeight * 0.75], ["burrow_mole", extraWeight * 0.65]],
       5: [["siege_rhino", extraWeight], ["iron_colossus", extraWeight * 0.7], ["gloom_mole", extraWeight * 0.55]],
