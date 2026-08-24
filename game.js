@@ -259,12 +259,42 @@
     const roster = window.FurRiftRoster;
     if (!roster?.ALLIES?.length) return;
     const RIFT_CROP = [0, 0, 320, 360];
+    // The extracted rift PNGs share a 320x360 canvas, but their opaque art has
+    // different top/bottom padding. Keep the common canvas (so relative sizes
+    // stay meaningful) and compensate only for that padding while drawing.
+    const RIFT_SPRITE_VERTICAL_BOUNDS = {
+      blackflame_fox: [0.1444, 0.8556], bloom_deer: [0.0972, 0.9028],
+      bone_boar: [0.3444, 0.9444], breeze_squirrel: [0.1333, 0.8639],
+      briar_spider: [0.1861, 0.8139], crystal_giant: [0.0889, 0.9111],
+      crystal_rabbit: [0.0778, 0.9222], crystal_raccoon: [0.1250, 0.8750],
+      dusk_fox: [0.15, 0.85], dusk_quill: [0.1833, 0.8139],
+      ember_boar: [0.2667, 0.9444], ember_otter: [0.1306, 0.8667],
+      flame_fox: [0.0778, 0.9222], fog_crow: [0.1333, 0.8639],
+      frost_bear: [0.1083, 0.8917], frost_boar: [0.3778, 0.9444],
+      gold_eagle: [0.1111, 0.8861], gold_mole: [0.1333, 0.8639],
+      holy_deer: [0.1139, 0.8861], iron_boar: [0.4222, 0.9444],
+      iron_turtle: [0.1028, 0.8972], lava_bear: [0.1556, 0.8417],
+      lava_toad: [0.1972, 0.8028], leaf_panda: [0.1556, 0.8417],
+      moon_fox: [0.1083, 0.8889], moon_hag: [0.0778, 0.9222],
+      moss_boar: [0.4111, 0.9444], mud_golem: [0.0778, 0.9222],
+      night_moth: [0.1639, 0.8361], pike_goat: [0.1056, 0.8944],
+      poison_frog: [0.175, 0.825], poison_quill: [0.0806, 0.9167],
+      rotwood: [0.0833, 0.9167], shade_raccoon: [0.0778, 0.9222],
+      shadow_bat: [0.2111, 0.7889], shadow_wolf: [0.1528, 0.8472],
+      silver_fox: [0.1111, 0.8861], spark_mouse: [0.175, 0.825],
+      spike_boar: [0.3444, 0.9444], spore_rat: [0.1444, 0.8556],
+      star_owl: [0.125, 0.8722], storm_hawk: [0.1167, 0.8833],
+      swamp_croc: [0.275, 0.725], thorn_fox: [0.1583, 0.8417],
+      thorn_rhino: [0.175, 0.825], thunder_lion: [0.0889, 0.9083],
+      venom_spider: [0.1889, 0.8083], wave_otter: [0.1722, 0.8278],
+    };
     const bindOne = (id, into, refreshUi, fitScale = 1.32) => {
       const entry = {
         image: new Image(),
         src: `assets/rift/${id}.png?v=13`,
         crop: RIFT_CROP,
         fitScale,
+        verticalBounds: RIFT_SPRITE_VERTICAL_BOUNDS[id] || [0, 1],
       };
       into[id] = entry;
       const apply = () => {
@@ -1293,7 +1323,9 @@
       team,
       dir,
       x,
-      y: GROUND + lane * Math.round(18 * VIEW_SCALE),
+      // A shallow lane offset preserves depth without making fighters look as
+      // if they are hovering far above or below the battlefield.
+      y: GROUND + lane * Math.round(10 * VIEW_SCALE),
       lane,
       hp: maxHp,
       maxHp,
@@ -3369,15 +3401,19 @@
     const lunge = Math.round(attack * (actor.projectile ? -4 : 13) * actor.dir);
     const recoilDir = actor.team === "ally" ? -1 : 1;
     const recoilOffset = Math.round(recoilDir * actor.recoil * 38);
-    const spawnScale = easeOut(actor.spawnAnim);
-    const bounce = actor.moving ? 1 + Math.abs(walk) * 0.03 : 1;
-    const bodyTilt = actor.moving ? walk * 0.02 : idle * 0.004;
+    // Quantized spawn scaling keeps square sprite pixels from shimmering.
+    const rawSpawnScale = easeOut(actor.spawnAnim);
+    const spawnScale = actor.spawnAnim >= 0.999
+      ? 1
+      : Math.max(0.25, Math.round(rawSpawnScale * 8) / 8);
     const flipSpriteX = Boolean(extraEnemySprite?.flipX);
+    const verticalBounds = extraAllySprite?.verticalBounds || extraEnemySprite?.verticalBounds || [0, 1];
+    const groundOffset = Math.round(drawH * Math.max(0, 1 - verticalBounds[1]));
+    const visibleTop = Math.round(-drawH + drawH * verticalBounds[0] + groundOffset);
 
     ctx.save();
     ctx.translate(Math.round(actor.x + lunge + recoilOffset), Math.round(actor.y - jump));
-    ctx.scale(spawnScale * bounce, spawnScale * bounce);
-    ctx.rotate(bodyTilt);
+    ctx.scale(spawnScale, spawnScale);
     if (flipSpriteX) ctx.scale(-1, 1);
     ctx.globalAlpha = actor.dead ? 1 - deathT : 1;
     if (actor.dead) {
@@ -3386,16 +3422,6 @@
     }
 
     pixelRect(-drawW * 0.38, 2 + jump, drawW * 0.76, 8, "rgba(21,30,24,.28)");
-    if (actor.moving && Math.abs(walk) > 0.68) {
-      ctx.save();
-      ctx.globalAlpha = 0.13;
-      ctx.drawImage(
-        sheet,
-        sourceX, sourceY, sourceW, sourceH,
-        Math.round(-drawW / 2 - 7), Math.round(-drawH), drawW, drawH
-      );
-      ctx.restore();
-    }
     if (actor.hitFlash > 0) {
       ctx.filter = "brightness(2.4) saturate(.2)";
     } else if (actor.tint && (!extraSheet || extraAllySprite?.allowTint || extraEnemySprite?.allowTint)) {
@@ -3405,7 +3431,7 @@
     ctx.drawImage(
       sheet,
       sourceX, sourceY, sourceW, sourceH,
-      Math.round(-drawW / 2), Math.round(-drawH), drawW, drawH
+      Math.round(-drawW / 2), Math.round(-drawH + groundOffset), drawW, drawH
     );
     ctx.filter = "none";
 
@@ -3421,9 +3447,9 @@
 
     if (actor.hp < actor.maxHp && !actor.dead) {
       const barW = Math.max(30, drawW);
-      pixelRect(-barW / 2, -drawH - 12, barW, 7, "#242634");
+      pixelRect(-barW / 2, visibleTop - 12, barW, 7, "#242634");
       pixelRect(
-        -barW / 2 + 2, -drawH - 10,
+        -barW / 2 + 2, visibleTop - 10,
         Math.max(0, (barW - 4) * actor.hp / actor.maxHp), 3,
         ally ? "#50d47b" : "#ef5b62"
       );
@@ -3563,7 +3589,9 @@
 
     const fighters = [...state.units, ...state.enemies].sort((a, b) => {
       const laneSort = a.y - b.y;
-      return laneSort || a.x - b.x;
+      // Spawn order is stable even after two fighters cross, so their visual
+      // layer no longer pops back and forth during a crowded clash.
+      return laneSort || a.uid - b.uid;
     });
     for (const fighter of fighters) drawPixelFighter(fighter);
     drawProjectiles();
