@@ -291,7 +291,7 @@
     const bindOne = (id, into, refreshUi, fitScale = 1.32) => {
       const entry = {
         image: new Image(),
-        src: `assets/rift/${id}.png?v=13`,
+        src: `assets/rift/${id}.png?v=14`,
         crop: RIFT_CROP,
         fitScale,
         verticalBounds: RIFT_SPRITE_VERTICAL_BOUNDS[id] || [0, 1],
