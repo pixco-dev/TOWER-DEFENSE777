@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest?v=1" />
   <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="assets/app-icon.svg" />
-  <link rel="stylesheet" href="styles.css?v=24" />
+  <link rel="stylesheet" href="styles.css?v=26" />
 </head>
 <body>
   <section id="title-screen" class="title-screen">
@@ -26,8 +26,13 @@
       </div>
 
       <div class="title-menu">
+        <div class="mode-tabs" role="tablist" aria-label="전투 모드">
+          <button id="mode-campaign-btn" class="mode-tab active" type="button" role="tab" aria-selected="true">본편 전선</button>
+          <button id="mode-rift-btn" class="mode-tab" type="button" role="tab" aria-selected="false">신월 전선</button>
+          <button id="mode-miku-btn" class="mode-tab" type="button" role="tab" aria-selected="false" hidden style="display:none">미쿠 라이브</button>
+        </div>
         <div class="stage-board">
-          <span class="board-label">스테이지 선택</span>
+          <span class="board-label" id="stage-board-label">스테이지 선택 · 본편</span>
           <div id="stage-list" class="stage-list"></div>
         </div>
         <button id="game-start-btn" class="title-start" type="button">
@@ -35,12 +40,12 @@
           <small>ENTER</small>
         </button>
         <button id="deck-btn" class="title-sub deck-menu-btn" type="button">
-          <span>출격 덱 편성</span>
+          <span id="deck-btn-label">출격 덱 편성</span>
           <b id="deck-summary">5 / 10</b>
         </button>
         <button id="how-btn" class="title-sub" type="button">조작법 보기</button>
         <button id="chest-btn" class="title-sub chest-menu-btn" type="button">
-          보급 상자 <b id="chest-count">0</b>
+          <span id="chest-btn-label">보급 상자</span> <b id="chest-count">0</b>
           <small id="collection-count">5 / 15 보유</small>
         </button>
         <button id="cloud-save-btn" class="title-sub cloud-save-btn" type="button">
@@ -74,9 +79,9 @@
         <button id="deck-close-btn" class="modal-close" type="button" aria-label="덱 편성 닫기">×</button>
         <div class="deck-heading">
           <div>
-            <span>MOONLIGHT SQUAD</span>
-            <h2>출격 덱 편성</h2>
-            <p>보유 대원 중 전투에 데려갈 대원을 선택하세요.</p>
+            <span id="deck-kicker">MOONLIGHT SQUAD</span>
+            <h2 id="deck-title">출격 덱 편성</h2>
+            <p id="deck-subtitle">보유 대원 중 전투에 데려갈 대원을 선택하세요.</p>
           </div>
           <div class="deck-status">
             <strong id="deck-count">5 / 10</strong>
@@ -97,8 +102,21 @@
 
       <div id="chest-panel" class="how-panel chest-panel hidden">
         <button id="chest-close-btn" class="modal-close" type="button" aria-label="상자 닫기">×</button>
-        <h2>달빛 보급 상자</h2>
-        <div class="chest-visual" aria-hidden="true">✦</div>
+        <h2 id="chest-title">달빛 보급 상자</h2>
+        <p class="chest-mode-note" id="chest-mode-note">본편 전투에서만 획득 · 본편 대원 전용</p>
+        <div class="chest-stage">
+          <div class="chest-visual" id="chest-visual" aria-hidden="true">
+            <span class="chest-lid"></span>
+            <span class="chest-body">✦</span>
+          </div>
+          <canvas id="chest-fx" class="chest-fx" width="320" height="180" aria-hidden="true"></canvas>
+          <div id="chest-reveal" class="chest-reveal hidden">
+            <canvas id="chest-reward-portrait" width="128" height="110" aria-hidden="true"></canvas>
+            <strong id="chest-reward-title"></strong>
+            <span id="chest-reward-tag"></span>
+            <p id="chest-reward-sub"></p>
+          </div>
+        </div>
         <div class="chest-odds" aria-label="상자 보상 확률">
           <span><b>55%</b> 캐릭터</span>
           <span><b>25%</b> 강화석</span>
@@ -109,7 +127,7 @@
         <button id="chest-open-btn" class="primary-btn" type="button">상자 열기</button>
       </div>
 
-      <span class="title-version">MOONLIGHT SQUAD · v5.1</span>
+      <span class="title-version">MOONLIGHT SQUAD · v5.2</span>
     </div>
   </section>
 
@@ -135,7 +153,7 @@
 
         <div class="base-status enemy">
           <div>
-            <span>가시왕 성채</span>
+            <span id="enemy-base-name">가시왕 성채</span>
             <strong id="enemy-hp">3200 / 3200</strong>
           </div>
           <span class="crest">B</span>
@@ -218,8 +236,9 @@
   </main>
 
   <script src="firebase-config.js?v=2"></script>
-  <script type="module" src="firebase-save.js?v=1"></script>
-  <script src="game.js?v=41"></script>
-  <script src="pwa.js?v=2"></script>
+  <script type="module" src="firebase-save.js?v=2"></script>
+  <script src="rift-roster.js?v=21"></script>
+  <script src="game.js?v=72"></script>
+  <script src="pwa.js?v=8"></script>
 </body>
 </html>

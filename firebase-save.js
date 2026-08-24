@@ -59,6 +59,7 @@ async function startFirebase() {
     return {
       profile: data.profile || null,
       unlocked: Number(data.unlocked) || 0,
+      unlockedRift: Number(data.unlockedRift) || 0,
       updatedAt: Number(data.clientUpdatedAt) || 0,
     };
   }
@@ -68,9 +69,10 @@ async function startFirebase() {
     if (!auth.currentUser || !snapshot) return false;
     const reference = firestoreSdk.doc(db, "playerSaves", auth.currentUser.uid);
     await firestoreSdk.setDoc(reference, {
-      schemaVersion: 1,
+      schemaVersion: 2,
       profile: snapshot.profile,
       unlocked: snapshot.unlocked,
+      unlockedRift: snapshot.unlockedRift || 0,
       clientUpdatedAt: snapshot.updatedAt,
       updatedAt: firestoreSdk.serverTimestamp(),
     }, { merge: true });

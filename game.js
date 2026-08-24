@@ -103,6 +103,25 @@
     comboBadge: document.getElementById("combo-badge"),
     comboCount: document.getElementById("combo-count"),
     overlayMenuBtn: document.getElementById("overlay-menu-btn"),
+    modeCampaignBtn: document.getElementById("mode-campaign-btn"),
+    modeRiftBtn: document.getElementById("mode-rift-btn"),
+    modeMikuBtn: document.getElementById("mode-miku-btn"),
+    enemyBaseName: document.getElementById("enemy-base-name"),
+    stageBoardLabel: document.getElementById("stage-board-label"),
+    deckBtnLabel: document.getElementById("deck-btn-label"),
+    deckKicker: document.getElementById("deck-kicker"),
+    deckTitle: document.getElementById("deck-title"),
+    deckSubtitle: document.getElementById("deck-subtitle"),
+    chestBtnLabel: document.getElementById("chest-btn-label"),
+    chestTitle: document.getElementById("chest-title"),
+    chestModeNote: document.getElementById("chest-mode-note"),
+    chestVisual: document.getElementById("chest-visual"),
+    chestFx: document.getElementById("chest-fx"),
+    chestReveal: document.getElementById("chest-reveal"),
+    chestRewardPortrait: document.getElementById("chest-reward-portrait"),
+    chestRewardTitle: document.getElementById("chest-reward-title"),
+    chestRewardTag: document.getElementById("chest-reward-tag"),
+    chestRewardSub: document.getElementById("chest-reward-sub"),
   };
 
   ctx.imageSmoothingEnabled = false;
@@ -113,10 +132,14 @@
   const unlockableSheet = new Image();
   const rockShieldSheet = new Image();
   const enemySheet = new Image();
+  const mikuEnemySheet = new Image();
+  const mikuTowerSheet = new Image();
   let allyPixels = null;
   let unlockablePixels = null;
   let rockShieldPixels = null;
   let enemyPixels = null;
+  let mikuEnemyPixels = null;
+  let mikuTowerPixels = null;
 
   const STAGE_BACKGROUND_FILES = [
     "assets/pixel-battlefield-night.png",
@@ -146,19 +169,46 @@
     drummer: { image: new Image(), src: "assets/pixel-ally-drummer-v1.png", crop: [174, 120, 828, 826] },
     scout: { image: new Image(), src: "assets/pixel-ally-scout-v1.png", crop: [263, 300, 736, 739] },
   };
+  // 월울프 PNG는 늑대 계열에만. 여우/송곳니는 mist_fox, 주술사는 본편 시트.
+  const SOLID_WOLF_CROP = [200, 210, 835, 810];
+  const SOLID_WOLF_SRC = "assets/pixel-enemy-moon-wolf-v1.png?v=2";
+  const makeSolidWolf = () => ({
+    image: new Image(),
+    src: SOLID_WOLF_SRC,
+    crop: SOLID_WOLF_CROP.slice(),
+    fitScale: 1.12,
+    allowTint: true,
+  });
+  const makeMistFox = () => ({
+    image: new Image(),
+    src: "assets/pixel-enemy-mist-fox-v1.png?v=2",
+    crop: [117, 181, 942, 825],
+    fitScale: 1.05,
+    allowTint: true,
+  });
   const EXTRA_ENEMY_SPRITES = {
-    bloodwing_bat: { image: new Image(), src: "assets/pixel-enemy-bloodwing-bat-v2.png", crop: [18, 164, 366, 380] },
+    bloodwing_bat: { image: new Image(), src: "assets/pixel-enemy-bloodwing-bat-v2.png?v=5", crop: [22, 170, 360, 374], fitScale: 0.92 },
     bone_raven: { image: new Image(), src: "assets/pixel-enemy-bone-raven-v3.png", crop: [18, 109, 366, 380] },
     siege_rhino: { image: new Image(), src: "assets/pixel-enemy-siege-rhino-v2.png", crop: [18, 182, 366, 380] },
     mooncap_witch: { image: new Image(), src: "assets/pixel-enemy-mooncap-witch-v2.png", crop: [18, 58, 366, 380] },
-    moon_wolf: { image: new Image(), src: "assets/pixel-enemy-moon-wolf-v1.png", crop: [144, 180, 894, 842] },
+    fang: makeMistFox(),
+    wolf: makeSolidWolf(),
+    moon_wolf: makeSolidWolf(),
+    wraith: makeMistFox(),
+    shadow_bat: {
+      image: new Image(),
+      src: "assets/pixel-enemy-bloodwing-bat-v2.png?v=5",
+      crop: [22, 170, 360, 374],
+      fitScale: 0.88,
+      allowTint: true,
+    },
     moss_toad: { image: new Image(), src: "assets/pixel-enemy-shell-toad-v1.png", crop: [83, 154, 946, 853] },
     burrow_mole: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png", crop: [28, 246, 943, 812] },
     gloom_mole: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png", crop: [28, 246, 943, 812] },
     thorn_elder: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png", crop: [64, 151, 1000, 868] },
     thorn_bishop: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png", crop: [64, 151, 1000, 868] },
     iron_colossus: { image: new Image(), src: "assets/pixel-enemy-iron-giant-v1.png", crop: [249, 69, 806, 910] },
-    mist_fox: { image: new Image(), src: "assets/pixel-enemy-mist-fox-v1.png", crop: [117, 181, 942, 825] },
+    mist_fox: { image: new Image(), src: "assets/pixel-enemy-mist-fox-v1.png?v=2", crop: [117, 181, 942, 825] },
     thorn_king: { image: new Image(), src: "assets/pixel-enemy-thorn-king-v1.png", crop: [140, 132, 954, 843] },
     dusk_lord: { image: new Image(), src: "assets/pixel-enemy-nightlord-v1.png", crop: [172, 128, 965, 873] },
   };
@@ -166,16 +216,87 @@
     sprite.image.addEventListener("load", () => {
       // PNGs are pre-keyed. Never strip interiors or dark fur/armor at runtime.
       sprite.sheet = sprite.image;
+      if (!sprite.crop || sprite.crop[2] <= sprite.crop[0]) {
+        sprite.crop = [0, 0, sprite.image.naturalWidth || 320, sprite.image.naturalHeight || 360];
+      }
       if (refreshUi) {
         renderCardPortraits();
         renderDeckBuilder();
       }
     });
     sprite.image.src = sprite.src;
-    if (sprite.image.complete && sprite.image.naturalWidth) sprite.sheet = sprite.image;
+    if (sprite.image.complete && sprite.image.naturalWidth) {
+      sprite.sheet = sprite.image;
+      if (!sprite.crop || sprite.crop[2] <= sprite.crop[0]) {
+        sprite.crop = [0, 0, sprite.image.naturalWidth, sprite.image.naturalHeight];
+      }
+    }
   };
   for (const sprite of Object.values(EXTRA_ALLY_SPRITES)) bindExtraSprite(sprite, true);
   for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) bindExtraSprite(sprite, false);
+
+  function montageCellCrop(img, index, cols = 4, rows = 2) {
+    const w = img.naturalWidth || 1024;
+    const h = img.naturalHeight || 576;
+    const titleH = h * 0.11;
+    const gridH = h - titleH - h * 0.02;
+    const cellW = w / cols;
+    const cellH = gridH / rows;
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    const padX = cellW * 0.04;
+    const padTop = cellH * 0.02;
+    const padBot = cellH * 0.18;
+    return [
+      Math.round(col * cellW + padX),
+      Math.round(titleH + row * cellH + padTop),
+      Math.round((col + 1) * cellW - padX),
+      Math.round(titleH + (row + 1) * cellH - padBot),
+    ];
+  }
+
+  function bindRiftMontageSprites() {
+    const roster = window.FurRiftRoster;
+    if (!roster?.ALLIES?.length) return;
+    const RIFT_CROP = [0, 0, 320, 360];
+    const bindOne = (id, into, refreshUi, fitScale = 1.32) => {
+      const entry = {
+        image: new Image(),
+        src: `assets/rift/${id}.png?v=13`,
+        crop: RIFT_CROP,
+        fitScale,
+      };
+      into[id] = entry;
+      const apply = () => {
+        entry.sheet = entry.image;
+        entry.crop = [0, 0, entry.image.naturalWidth || 320, entry.image.naturalHeight || 360];
+        if (refreshUi) {
+          if (typeof renderCardPortraits === "function") renderCardPortraits();
+          if (typeof renderDeckBuilder === "function") renderDeckBuilder();
+        }
+      };
+      entry.image.addEventListener("load", apply);
+      entry.image.src = entry.src;
+      if (entry.image.complete && entry.image.naturalWidth) apply();
+    };
+    // 늑대만 월울프, 여우/송곳니는 mist_fox (색만 바꾼 늑대 양산 방지)
+    const solidWolfIds = ["ember_wolf", "shadow_wolf"];
+    const mistFoxIds = ["ice_fang", "thorn_fox", "blackflame_fox"];
+    for (const id of solidWolfIds) {
+      EXTRA_ENEMY_SPRITES[id] = makeSolidWolf();
+      bindExtraSprite(EXTRA_ENEMY_SPRITES[id], false);
+    }
+    for (const id of mistFoxIds) {
+      EXTRA_ENEMY_SPRITES[id] = makeMistFox();
+      bindExtraSprite(EXTRA_ENEMY_SPRITES[id], false);
+    }
+    for (const unit of roster.ALLIES) bindOne(unit.id, EXTRA_ALLY_SPRITES, true, 1.0);
+    for (const id of Object.keys(roster.ENEMIES || {})) {
+      if (solidWolfIds.includes(id) || mistFoxIds.includes(id) || EXTRA_ENEMY_SPRITES[id]) continue;
+      bindOne(id, EXTRA_ENEMY_SPRITES, false, 1.06);
+    }
+  }
+  bindRiftMontageSprites();
 
   const ALLY_CROPS = [
     [12, 345, 303, 675],
@@ -189,6 +310,15 @@
     [315, 458, 672, 803],
     [668, 308, 1058, 807],
     [1065, 273, 1493, 810],
+  ];
+
+  const MIKU_ENEMY_IDS = [
+    "miku_diva", "miku_leek", "miku_speaker", "miku_note",
+    "miku_lance", "miku_frost", "miku_archer", "miku_cannon",
+  ];
+  const MIKU_ENEMY_CROPS = [
+    [20, 211, 311, 516], [343, 228, 686, 512], [686, 217, 1029, 513], [1029, 211, 1361, 514],
+    [5, 581, 343, 912], [348, 601, 681, 914], [686, 596, 1029, 912], [1029, 618, 1367, 912],
   ];
 
   const UNLOCKABLE_SPRITE_INDEX = {
@@ -331,6 +461,23 @@
   enemySheet.addEventListener("load", () => {
     enemyPixels = enemySheet;
   });
+  mikuEnemySheet.addEventListener("load", () => {
+    // v2는 실제 알파 PNG라 file://에서도 캔버스 보정 없이 그대로 쓸 수 있다.
+    mikuEnemyPixels = mikuEnemySheet;
+    MIKU_ENEMY_IDS.forEach((id, index) => {
+      EXTRA_ENEMY_SPRITES[id] = {
+        image: mikuEnemySheet,
+        sheet: mikuEnemyPixels,
+        crop: MIKU_ENEMY_CROPS[index],
+        fitScale: id === "miku_diva" ? 1.12 : 0.96,
+        flipX: true,
+      };
+    });
+  });
+  mikuTowerSheet.addEventListener("load", () => {
+    mikuTowerPixels = mikuTowerSheet;
+  });
+  // 미쿠 라이브는 제작 중이므로 공개 신월 배포에서는 에셋 로드를 보류한다.
 
   const UNIT_TYPES = [
     {
@@ -396,8 +543,8 @@
       info: "달빛 기도로 전열의 아군을 크게 회복",
     },
     {
-      id: "night_fox", name: "밤칼여우", cost: 310, hp: 265, damage: 112,
-      speed: 75, range: 42, cooldown: 0.68, size: 56, recharge: 7.4, kind: "assassin",
+      id: "night_fox", name: "밤칼여우", cost: 310, hp: 265, damage: 112, tint: "brightness(1.22) contrast(1.06)",
+      speed: 75, range: 42, cooldown: 0.68, size: 48, recharge: 7.4, kind: "assassin",
       critChance: 0.34, critPower: 2.15, unlockable: true,
       info: "그림자 속에서 파고드는 치명타 암살자",
     },
@@ -482,11 +629,12 @@
     fang: {
       id: "fang", name: "붉은 송곳니", hp: 390, damage: 38, speed: 55,
       range: 46, cooldown: 1.05, size: 64, reward: 58, kind: "fang", sprite: 1,
+      tint: "hue-rotate(-25deg) saturate(1.35) brightness(1.05)",
     },
     wolf: {
       id: "wolf", name: "달빛늑대", hp: 320, damage: 46, speed: 72,
       range: 42, cooldown: 0.78, size: 60, reward: 64, kind: "wolf", sprite: 1,
-      tint: "hue-rotate(200deg) saturate(1.15) brightness(.88)",
+      tint: "saturate(1.15) brightness(1.08)",
     },
     brute: {
       id: "brute", name: "골렘", hp: 860, damage: 84, speed: 25,
@@ -530,7 +678,7 @@
       id: "wraith", name: "안개여우", hp: 480, damage: 72, speed: 66,
       range: 44, cooldown: 0.7, size: 58, reward: 96, kind: "wraith", sprite: 1,
       critChance: 0.22, critPower: 1.8,
-      tint: "hue-rotate(250deg) saturate(.6) brightness(1.25)",
+      tint: "hue-rotate(200deg) saturate(.7) brightness(1.1)",
     },
     boss: {
       id: "boss", name: "가시왕", hp: 2400, damage: 132, speed: 17,
@@ -567,7 +715,8 @@
     },
     moon_wolf: {
       id: "moon_wolf", name: "월하늑대", hp: 340, damage: 50, speed: 70,
-      range: 44, cooldown: 0.76, size: 62, reward: 72, kind: "wolf",
+      range: 44, cooldown: 0.76, size: 58, reward: 72, kind: "wolf",
+      tint: "hue-rotate(8deg) saturate(1.15) brightness(1.05)",
     },
     moss_toad: {
       id: "moss_toad", name: "습지두꺼비", hp: 1040, damage: 56, speed: 15,
@@ -611,6 +760,54 @@
       range: 84, cooldown: 1.44, size: 124, reward: 920, kind: "nightlord", cleave: 150,
     },
   };
+
+  Object.assign(ENEMY_TYPES, {
+    miku_diva: {
+      id: "miku_diva", name: "하츠네 미쿠", hp: 4300, damage: 138, speed: 28,
+      range: 245, cooldown: 1.15, size: 88, reward: 900, kind: "miku_diva",
+      projectile: true, splash: 78, shot: "#41e6d5", raid: true,
+    },
+    miku_leek: {
+      id: "miku_leek", name: "대파 블레이드", hp: 330, damage: 43, speed: 67,
+      range: 46, cooldown: 0.58, size: 59, reward: 48, kind: "miku_leek", cleave: 38,
+    },
+    miku_speaker: {
+      id: "miku_speaker", name: "스피커 가디언", hp: 1160, damage: 54, speed: 18,
+      range: 55, cooldown: 1.32, size: 72, reward: 142, kind: "miku_speaker", cleave: 76,
+    },
+    miku_note: {
+      id: "miku_note", name: "음표 메이지", hp: 470, damage: 68, speed: 28,
+      range: 238, cooldown: 1.38, size: 62, reward: 82, kind: "miku_note",
+      projectile: true, splash: 48, heal: 42, shot: "#ff4faf",
+    },
+    miku_lance: {
+      id: "miku_lance", name: "리듬 랜서", hp: 720, damage: 88, speed: 37,
+      range: 68, cooldown: 0.96, size: 66, reward: 102, kind: "miku_lance", cleave: 64,
+    },
+    miku_frost: {
+      id: "miku_frost", name: "스노우 보컬", hp: 560, damage: 62, speed: 24,
+      range: 225, cooldown: 1.48, size: 66, reward: 98, kind: "miku_frost",
+      projectile: true, slow: 2.8, shot: "#83dcff",
+    },
+    miku_archer: {
+      id: "miku_archer", name: "네온 아처", hp: 390, damage: 112, speed: 30,
+      range: 315, cooldown: 1.72, size: 63, reward: 112, kind: "miku_archer",
+      projectile: true, critChance: 0.2, critPower: 1.75, shot: "#5ff4ef",
+    },
+    miku_cannon: {
+      id: "miku_cannon", name: "라이브 캐논", hp: 980, damage: 146, speed: 17,
+      range: 285, cooldown: 2.1, size: 78, reward: 176, kind: "miku_cannon",
+      projectile: true, splash: 126, siege: 1.9, shot: "#ff5ab6",
+    },
+  });
+
+  const RIFT = window.FurRiftRoster || {
+    ALLIES: [], ENEMIES: {}, STAGES: [], CHAPTERS: {}, ALLY_SHEETS: [], ENEMY_SHEETS: [],
+  };
+  for (const unit of RIFT.ALLIES) UNIT_TYPES.push(unit);
+  Object.assign(ENEMY_TYPES, RIFT.ENEMIES);
+  const RIFT_STAGES = RIFT.STAGES;
+  const RIFT_CHAPTERS = RIFT.CHAPTERS;
 
   const CHAPTERS = {
     1: "1장 · 초원 전선",
@@ -670,7 +867,20 @@
     S("8-5", "가시왕 옥좌", "★★★★★", 8000, 14500, 300, 26, 0.9, [["jugger", 0.32], ["priest", 0.34], ["wraith", 0.34]], "nightlord", 2.42, 4),
   ];
 
+  const MIKU_CHAPTERS = {
+    M1: "특별 무대 · 네온 라이브 침공",
+  };
+  const MIKU_STAGES = [
+    S("M1-1", "첫 번째 사운드 체크", "★☆☆", 3600, 2400, 250, 13, 2.2, [["miku_leek", 0.48], ["miku_note", 0.3], ["miku_speaker", 0.22]], null, 0.9),
+    S("M1-2", "대파 비트 러시", "★★☆", 3800, 3000, 240, 16, 2.0, [["miku_leek", 0.38], ["miku_lance", 0.32], ["miku_note", 0.3]], null, 1.0),
+    S("M1-3", "푸른 조명의 합주", "★★☆", 4100, 3700, 235, 18, 1.82, [["miku_speaker", 0.25], ["miku_frost", 0.28], ["miku_archer", 0.25], ["miku_leek", 0.22]], null, 1.12),
+    S("M1-4", "네온 앙코르", "★★★", 4400, 4500, 230, 20, 1.68, [["miku_lance", 0.24], ["miku_frost", 0.22], ["miku_archer", 0.26], ["miku_cannon", 0.28]], null, 1.24),
+    S("M1-5", "라스트 라이브", "★★★★", 4800, 5500, 225, 23, 1.55, [["miku_speaker", 0.2], ["miku_note", 0.2], ["miku_frost", 0.2], ["miku_archer", 0.2], ["miku_cannon", 0.2]], null, 1.38),
+  ];
+
   const SAVE_KEY = "fur-front-unlock";
+  const RIFT_SAVE_KEY = "fur-front-rift-unlock";
+  const MIKU_SAVE_KEY = "fur-front-miku-unlock";
   const PROFILE_KEY = "fur-front-profile-v2";
   const LOCAL_UPDATED_KEY = "fur-front-local-updated-v1";
   const MAX_DECK_SIZE = 10;
@@ -679,7 +889,10 @@
   const ALLY_RECHARGE = 0.8;
   const STONE_SELL_GOLD = 50;
   const STONE_BUY_GOLD = 70;
-  const STARTER_UNITS = UNIT_TYPES.filter((unit) => !unit.unlockable).map((unit) => unit.id);
+  const STARTER_UNITS = UNIT_TYPES.filter((unit) => !unit.unlockable && !unit.rift).map((unit) => unit.id);
+  const RIFT_STARTER_UNITS = []; // 신월 대원은 상자로만 획득
+  const CAMPAIGN_UNIT_IDS = new Set(UNIT_TYPES.filter((unit) => !unit.rift).map((unit) => unit.id));
+  const RIFT_UNIT_IDS = new Set(UNIT_TYPES.filter((unit) => unit.rift).map((unit) => unit.id));
   const LEGACY_UNIT_MIGRATIONS = {
     healer: "moon_cleric",
     assassin: "night_fox",
@@ -693,27 +906,58 @@
   }
 
   function normalizeProfile(saved = {}) {
-      const savedUnits = migrateUnitIds(Array.isArray(saved.units) ? saved.units : []);
-      const units = [...new Set([...STARTER_UNITS, ...savedUnits])]
-        .filter((id) => UNIT_TYPES.some((unit) => unit.id === id));
+      const savedUnits = migrateUnitIds(Array.isArray(saved.units) ? saved.units : [])
+        .filter((id) => CAMPAIGN_UNIT_IDS.has(id));
+      const units = [...new Set([...STARTER_UNITS, ...savedUnits])];
+      // 예전에 무료로 풀려 있던 신월 스타터는 유지하지 않음 — 상자 획득분만 인정
+      const savedRiftUnits = migrateUnitIds(Array.isArray(saved.riftUnits) ? saved.riftUnits : [])
+        .filter((id) => RIFT_UNIT_IDS.has(id));
+      // 초기에 잘못 무료 지급했던 5종은 한 번 회수 (이후 상자 획득분은 유지)
+      const FREE_RIFT_PREVIEW = new Set([
+        "flame_fox", "crystal_raccoon", "breeze_squirrel", "gold_mole", "silver_fox",
+      ]);
+      let riftUnits = [...new Set(savedRiftUnits)];
+      const riftGrantRevoked = Boolean(saved.riftGrantRevoked);
+      if (!riftGrantRevoked) {
+        riftUnits = riftUnits.filter((id) => !FREE_RIFT_PREVIEW.has(id));
+      }
+      const ownedAll = new Set([...units, ...riftUnits]);
       const requestedDeck = Array.isArray(saved.deck) ? migrateUnitIds(saved.deck) : units;
       const deck = [...new Set(requestedDeck)]
-        .filter((id) => units.includes(id))
+        .filter((id) => ownedAll.has(id))
         .slice(0, MAX_DECK_SIZE);
+      const requestedRiftDeck = Array.isArray(saved.riftDeck) ? migrateUnitIds(saved.riftDeck) : units.slice(0, 5);
+      let riftDeck = [...new Set(requestedRiftDeck)]
+        .filter((id) => ownedAll.has(id))
+        .slice(0, MAX_DECK_SIZE);
+      // 신월 덱에 본편 기본 대원이 하나도 없으면 자동으로 채워 넣음
+      const hasCampaignInRiftDeck = riftDeck.some((id) => CAMPAIGN_UNIT_IDS.has(id));
+      if (!hasCampaignInRiftDeck) {
+        for (const id of STARTER_UNITS) {
+          if (riftDeck.length >= MAX_DECK_SIZE) break;
+          if (ownedAll.has(id) && !riftDeck.includes(id)) riftDeck.push(id);
+        }
+      }
       const savedLevels = saved.levels && typeof saved.levels === "object" ? saved.levels : {};
-      const levels = Object.fromEntries(units.map((id) => [
+      const allOwned = [...ownedAll];
+      const levels = Object.fromEntries(allOwned.map((id) => [
         id,
         Math.max(1, Math.min(MAX_UNIT_LEVEL, Math.floor(Number(savedLevels[id]) || 1))),
       ]));
       return {
         chests: Math.max(0, Number(saved.chests) || 0),
+        riftChests: Math.max(0, Number(saved.riftChests) || 0),
         gold: saved.gold === undefined ? 300 : Math.max(0, Math.floor(Number(saved.gold) || 0)),
         materials: saved.materials === undefined ? 8 : Math.max(0, Math.floor(Number(saved.materials) || 0)),
         units,
+        riftUnits,
         deck: deck.length ? deck : [units[0]],
+        riftDeck: riftDeck.length ? riftDeck : units.slice(0, Math.min(5, units.length)),
         levels,
         duplicates: saved.duplicates && typeof saved.duplicates === "object" ? saved.duplicates : {},
         claimedStages: Array.isArray(saved.claimedStages) ? saved.claimedStages : [],
+        riftClaimedStages: Array.isArray(saved.riftClaimedStages) ? saved.riftClaimedStages : [],
+        riftGrantRevoked: true,
       };
   }
 
@@ -733,6 +977,8 @@
     return {
       profile: JSON.parse(JSON.stringify(state.profile)),
       unlocked: state.unlocked,
+      unlockedRift: state.unlockedRift,
+      unlockedMiku: state.unlockedMiku,
       updatedAt,
     };
   }
@@ -749,7 +995,61 @@
   }
 
   function ownsUnit(id) {
+    const unit = UNIT_TYPES.find((entry) => entry.id === id);
+    if (!unit) return false;
+    if (unit.rift) return state.profile.riftUnits.includes(id);
     return state.profile.units.includes(id);
+  }
+
+  function isRiftMode() {
+    return state.battleMode === "rift";
+  }
+
+  function isMikuMode() {
+    return state.battleMode === "miku";
+  }
+
+  function activeStages() {
+    if (isMikuMode()) return MIKU_STAGES;
+    return isRiftMode() ? RIFT_STAGES : STAGES;
+  }
+
+  function activeChapters() {
+    if (isMikuMode()) return MIKU_CHAPTERS;
+    return isRiftMode() ? RIFT_CHAPTERS : CHAPTERS;
+  }
+
+  function activeUnlocked() {
+    if (isMikuMode()) return state.unlockedMiku;
+    return isRiftMode() ? state.unlockedRift : state.unlocked;
+  }
+
+  function activeDeckIds() {
+    return isRiftMode() ? state.profile.riftDeck : state.profile.deck;
+  }
+
+  function activeOwnedIds() {
+    return [...new Set([...state.profile.units, ...state.profile.riftUnits])];
+  }
+
+  function activeChestCount() {
+    return isRiftMode() ? state.profile.riftChests : state.profile.chests;
+  }
+
+  function setActiveChestCount(value) {
+    if (isRiftMode()) state.profile.riftChests = value;
+    else state.profile.chests = value;
+  }
+
+  function modeUnits() {
+    // 본편/신월 모두: 보유한 본편+신월 대원 편성 가능
+    return UNIT_TYPES;
+  }
+
+  function unlockablePool() {
+    // 상자는 모드별로 분리 (신월 상자는 신규만, 본편 상자는 본편만)
+    if (isRiftMode()) return UNIT_TYPES.filter((unit) => unit.rift && unit.unlockable);
+    return UNIT_TYPES.filter((unit) => !unit.rift && unit.unlockable);
   }
 
   function unitLevel(id) {
@@ -770,7 +1070,7 @@
   }
 
   function availableUnits() {
-    return state.profile.deck
+    return activeDeckIds()
       .map((id) => UNIT_TYPES.find((unit) => unit.id === id))
       .filter(Boolean)
       .slice(0, MAX_DECK_SIZE);
@@ -781,6 +1081,16 @@
     return Number.isFinite(n) ? Math.max(0, Math.min(STAGES.length - 1, n)) : 0;
   }
 
+  function loadRiftUnlock() {
+    const n = Number(localStorage.getItem(RIFT_SAVE_KEY) || 0);
+    return Number.isFinite(n) ? Math.max(0, Math.min(Math.max(RIFT_STAGES.length - 1, 0), n)) : 0;
+  }
+
+  function loadMikuUnlock() {
+    const n = Number(localStorage.getItem(MIKU_SAVE_KEY) || 0);
+    return Number.isFinite(n) ? Math.max(0, Math.min(Math.max(MIKU_STAGES.length - 1, 0), n)) : 0;
+  }
+
   function saveUnlock(index) {
     localStorage.setItem(SAVE_KEY, String(index));
     const updatedAt = Date.now();
@@ -788,8 +1098,23 @@
     queueCloudSave(updatedAt);
   }
 
+  function saveRiftUnlock(index) {
+    localStorage.setItem(RIFT_SAVE_KEY, String(index));
+    const updatedAt = Date.now();
+    localStorage.setItem(LOCAL_UPDATED_KEY, String(updatedAt));
+    queueCloudSave(updatedAt);
+  }
+
+  function saveMikuUnlock(index) {
+    localStorage.setItem(MIKU_SAVE_KEY, String(index));
+    const updatedAt = Date.now();
+    localStorage.setItem(LOCAL_UPDATED_KEY, String(updatedAt));
+    queueCloudSave(updatedAt);
+  }
+
   function currentStage() {
-    return STAGES[state.stageIndex] || STAGES[0];
+    const stages = activeStages();
+    return stages[state.stageIndex] || stages[0];
   }
 
   function pickFromPool(pool) {
@@ -803,18 +1128,34 @@
   }
 
   function stageEnemyPool(stage) {
+    if (isMikuMode()) return stage.pool;
+    if (stage.rift || isRiftMode()) {
+      const [chapterText] = String(stage.id).replace(/^R/, "").split("-");
+      const chapter = Number(chapterText) || 1;
+      const classic = {
+        // 신월: 초반은 멧돼지/잔챙이 위주, 늑대·박쥐 비중 낮춤
+        1: [["sprout", 0.38], ["swarm", 0.28], ["spike_boar", 0.2], ["spore_rat", 0.14]],
+        2: [["brute", 0.22], ["spike_boar", 0.2], ["spitter", 0.18], ["bone_raven", 0.14], ["fang", 0.12]],
+        3: [["spitter", 0.2], ["shell", 0.16], ["brute", 0.14], ["bone_raven", 0.12], ["moss_toad", 0.1]],
+        4: [["spitter", 0.16], ["mist_fox", 0.14], ["burrow_mole", 0.14], ["wraith", 0.12], ["brute", 0.1]],
+        5: [["jugger", 0.16], ["toxic", 0.14], ["siege_rhino", 0.12], ["iron_colossus", 0.1], ["iron_boar", 0.12]],
+        6: [["shaman", 0.14], ["priest", 0.12], ["mooncap_witch", 0.12], ["thorn_elder", 0.1], ["wraith", 0.1]],
+        7: [["jugger", 0.14], ["wraith", 0.12], ["thorn_bishop", 0.1], ["nightlord", 0.06], ["dusk_lord", 0.05]],
+      }[Math.min(chapter, 7)] || [];
+      return [...stage.pool, ...classic];
+    }
     const [chapterText, partText] = stage.id.split("-");
     const chapter = Number(chapterText) || 1;
     const part = Number(partText) || 1;
     const extraWeight = 0.1 + part * 0.018;
     const reinforcements = {
-      2: [["bloodwing_bat", extraWeight], ["moon_wolf", extraWeight * 0.7]],
+      2: [["bone_raven", extraWeight], ["spike_boar", extraWeight * 0.8], ["moss_toad", extraWeight * 0.55]],
       3: [["bone_raven", extraWeight], ["moss_toad", extraWeight * 0.7], ["burrow_mole", extraWeight * 0.65]],
-      4: [["bloodwing_bat", extraWeight * 0.65], ["bone_raven", extraWeight * 0.75], ["mist_fox", extraWeight * 0.8]],
+      4: [["mist_fox", extraWeight * 0.8], ["bone_raven", extraWeight * 0.75], ["burrow_mole", extraWeight * 0.65]],
       5: [["siege_rhino", extraWeight], ["iron_colossus", extraWeight * 0.7], ["gloom_mole", extraWeight * 0.55]],
       6: [["mooncap_witch", extraWeight], ["bone_raven", extraWeight * 0.55], ["thorn_elder", extraWeight * 0.7]],
       7: [["siege_rhino", extraWeight * 0.75], ["mooncap_witch", extraWeight * 0.8], ["thorn_bishop", extraWeight * 0.65], ["iron_colossus", extraWeight * 0.5]],
-      8: [["bloodwing_bat", extraWeight * 0.45], ["siege_rhino", extraWeight * 0.7], ["mooncap_witch", extraWeight], ["thorn_king", extraWeight * 0.35], ["dusk_lord", extraWeight * 0.28]],
+      8: [["siege_rhino", extraWeight * 0.7], ["mooncap_witch", extraWeight], ["thorn_king", extraWeight * 0.35], ["dusk_lord", extraWeight * 0.28]],
     }[chapter] || [];
     return [...stage.pool, ...reinforcements];
   }
@@ -864,6 +1205,10 @@
     nextId: 1,
     stageIndex: 0,
     unlocked: 0,
+    unlockedRift: 0,
+    unlockedMiku: 0,
+    battleMode: "campaign",
+    chestBusy: false,
     spawnQueue: [],
     waveQueues: [],
     waveIndex: 1,
@@ -878,10 +1223,15 @@
     bestCombo: 0,
     dangerLevel: 0,
     castleHint: false,
+    mikuTowerBroken: false,
+    mikuBossUid: null,
+    mikuFinaleDefeated: false,
     profile: loadProfile(),
   };
 
   state.unlocked = loadUnlock();
+  state.unlockedRift = loadRiftUnlock();
+  state.unlockedMiku = loadMikuUnlock();
   state.stageIndex = state.unlocked;
 
   let audioCtx = null;
@@ -993,13 +1343,15 @@
 
   function spawnEnemy(kind) {
     const base = ENEMY_TYPES[kind];
+    if (!base) return;
     const scale = currentStage().scale;
     const hpScale = scale <= 1.55 ? scale : 1.55 + (scale - 1.55) * 0.32;
     const dmgScale = 1 + Math.max(0, scale - 1) * 0.12;
     const pressure = 1 + state.dangerLevel * 0.04;
     const late = clamp((scale - 1.15) / 1.27, 0, 1);
-    const hpMult = 1.08 * (1 + late * 0.39);
-    const dmgMult = 1.06 * (1 + late * 0.132);
+    const riftBoost = isRiftMode() ? 1.22 : 1;
+    const hpMult = 1.08 * (1 + late * 0.39) * riftBoost;
+    const dmgMult = 1.06 * (1 + late * 0.132) * (isRiftMode() ? 1.16 : 1);
     const type = {
       ...base,
       hp: Math.round(base.hp * hpScale * pressure * hpMult),
@@ -1019,6 +1371,7 @@
   }
 
   function updateSpawning(dt) {
+    if (isMikuMode() && state.mikuTowerBroken) return;
     if (!state.spawnQueue.length) {
       if (!state.waveWaiting) {
         state.waveWaiting = true;
@@ -1119,6 +1472,7 @@
   }
 
   function baseDistance(actor) {
+    if (isMikuMode() && state.mikuTowerBroken && actor.team === "ally") return Infinity;
     const baseX = actor.team === "ally" ? ENEMY_BASE_X : PLAYER_BASE_X;
     return Math.abs(baseX - actor.x) - actor.size * 0.4 - 58;
   }
@@ -1445,8 +1799,36 @@
         state.command = Math.min(state.commandMax, state.command + 7 + Math.min(8, state.combo));
         floating(target.x, target.y - target.size, `+${reward}G`, "#ffe253", 17);
         if (state.combo >= 3) floating(target.x, target.y - target.size - 25, `${state.combo} COMBO`, "#ff9ee5", 16);
+        if (isMikuMode() && target.id === "miku_diva") {
+          state.mikuFinaleDefeated = true;
+          showMessage("FINAL ENCORE CLEAR · 미쿠 격파!", 3);
+          burst(target.x, target.y - target.size * 0.55, "#55f4e6", 42, 230);
+          state.flash = Math.max(state.flash, 0.48);
+        }
       }
     }
+  }
+
+  function releaseMikuFinale() {
+    if (!isMikuMode() || state.mikuTowerBroken) return;
+    state.mikuTowerBroken = true;
+    state.enemyHp = 0;
+    state.spawnQueue = [];
+    state.waveQueues = [];
+    state.waveWaiting = false;
+    state.castleHint = false;
+    burst(ENEMY_BASE_X, GROUND - 100, "#ff4faf", 46, 235);
+    burst(ENEMY_BASE_X, GROUND - 135, "#48eadc", 38, 210);
+    state.shake = 1.35;
+    state.flash = 0.34;
+    spawnEnemy("miku_diva");
+    const boss = state.enemies[state.enemies.length - 1];
+    if (boss?.id === "miku_diva") {
+      boss.x = BATTLE_END - Math.round(18 * VIEW_SCALE);
+      boss.y = GROUND;
+      state.mikuBossUid = boss.uid;
+    }
+    showMessage("성채 파괴! FINAL ENCORE · 하츠네 미쿠 등장!", 3.2);
   }
 
   function damageBase(team, amount) {
@@ -1454,8 +1836,10 @@
       state.playerHp = Math.max(0, state.playerHp - amount);
       burst(PLAYER_BASE_X + 20, GROUND - 95, "#ffbd73", 12, 145);
     } else {
+      if (isMikuMode() && state.mikuTowerBroken) return;
       state.enemyHp = Math.max(0, state.enemyHp - amount);
       burst(ENEMY_BASE_X - 20, GROUND - 95, "#b5dbff", 12, 145);
+      if (isMikuMode() && state.enemyHp <= 0) releaseMikuFinale();
     }
     state.shake = Math.max(state.shake, 0.18);
     sound("hit");
@@ -1581,7 +1965,11 @@
   }
 
   function checkEnd() {
-    if (state.enemyHp <= 0 && state.mode === "playing") endGame(true);
+    if (isMikuMode()) {
+      if (state.mikuFinaleDefeated && state.mode === "playing") endGame(true);
+    } else if (state.enemyHp <= 0 && state.mode === "playing") {
+      endGame(true);
+    }
     if (state.playerHp <= 0 && state.mode === "playing") endGame(false);
   }
 
@@ -1589,20 +1977,32 @@
     state.mode = win ? "win" : "lose";
     state.paused = false;
     const stage = currentStage();
-    const hasNext = state.stageIndex < STAGES.length - 1;
+    const stages = activeStages();
+    const hasNext = state.stageIndex < stages.length - 1;
     if (win && hasNext) {
-      state.unlocked = Math.max(state.unlocked, state.stageIndex + 1);
-      saveUnlock(state.unlocked);
+      if (isMikuMode()) {
+        state.unlockedMiku = Math.max(state.unlockedMiku, state.stageIndex + 1);
+        saveMikuUnlock(state.unlockedMiku);
+      } else if (isRiftMode()) {
+        state.unlockedRift = Math.max(state.unlockedRift, state.stageIndex + 1);
+        saveRiftUnlock(state.unlockedRift);
+      } else {
+        state.unlocked = Math.max(state.unlocked, state.stageIndex + 1);
+        saveUnlock(state.unlocked);
+      }
     }
     let chestsGained = 0;
+    const chestLabel = isMikuMode() ? "네온 보급 상자" : (isRiftMode() ? "신월 보급 상자" : "달빛 보급 상자");
     if (win) {
       chestsGained = 1;
-      if (!state.profile.claimedStages.includes(stage.id)) {
-        state.profile.claimedStages.push(stage.id);
+      const claimed = isRiftMode() ? state.profile.riftClaimedStages : state.profile.claimedStages;
+      if (!claimed.includes(stage.id)) {
+        claimed.push(stage.id);
         chestsGained += 1;
       }
       if (stage.boss) chestsGained += 1;
-      state.profile.chests += chestsGained;
+      if (isRiftMode()) state.profile.riftChests += chestsGained;
+      else state.profile.chests += chestsGained;
     }
     let progressionReward = "";
     if (win) {
@@ -1613,13 +2013,14 @@
       progressionReward = `<br />보급 골드 <b>${clearGold}G</b> · 강화석 <b>${clearMaterials}개</b>`;
       saveProfile();
     }
+    const finaleLabel = isMikuMode() ? "FINAL LIVE 완전 돌파!" : (isRiftMode() ? "신월 전선 완전 돌파!" : "전선 완전 돌파!");
     ui.overlayTitle.textContent = win
-      ? (hasNext ? `${stage.id} 클리어!` : "전선 완전 돌파!")
+      ? (hasNext ? `${stage.id} 클리어!` : finaleLabel)
       : "성채 함락";
     ui.overlayDesc.innerHTML = win
       ? (hasNext
-        ? `<b>${stage.name}</b>을 지켜냈습니다.<br />${state.kills}명 처치 · 최고 ${state.bestCombo} 콤보${progressionReward}${chestsGained ? `<br /><b>달빛 보급 상자 ${chestsGained}개 획득!</b>` : ""}`
-        : `8장 끝까지 전선을 지켜냈습니다.<br /><b>${Math.floor(state.battleTime)}초</b> · 최고 ${state.bestCombo} 콤보${progressionReward}${chestsGained ? `<br /><b>달빛 보급 상자 ${chestsGained}개 획득!</b>` : ""}`)
+        ? `<b>${stage.name}</b>을 지켜냈습니다.<br />${state.kills}명 처치 · 최고 ${state.bestCombo} 콤보${progressionReward}${chestsGained ? `<br /><b>${chestLabel} ${chestsGained}개 획득!</b>` : ""}`
+        : `${isMikuMode() ? "미쿠 라이브" : (isRiftMode() ? "신월 전선" : "8장")} 끝까지 전선을 지켜냈습니다.<br /><b>${Math.floor(state.battleTime)}초</b> · 최고 ${state.bestCombo} 콤보${progressionReward}${chestsGained ? `<br /><b>${chestLabel} ${chestsGained}개 획득!</b>` : ""}`)
       : `${stage.id} ${stage.name}<br />적의 공세를 막지 못했습니다.`;
     ui.overlayBtn.textContent = win
       ? (hasNext ? "다음 스테이지" : "스테이지 선택")
@@ -1676,6 +2077,9 @@
       messageTimer: 0,
       nextId: 1,
       castleHint: false,
+      mikuTowerBroken: false,
+      mikuBossUid: null,
+      mikuFinaleDefeated: false,
     });
     ui.overlay.classList.add("hidden");
     ui.pauseLayer.classList.add("hidden");
@@ -1719,10 +2123,20 @@
   }
 
   function updateUI() {
+    const mikuBoss = isMikuMode() && state.mikuBossUid
+      ? state.enemies.find((enemy) => enemy.uid === state.mikuBossUid)
+      : null;
+    const displayEnemyHp = mikuBoss ? Math.max(0, mikuBoss.hp) : state.enemyHp;
+    const displayEnemyMaxHp = mikuBoss ? mikuBoss.maxHp : state.enemyMaxHp;
     ui.playerHp.textContent = `${Math.ceil(state.playerHp)} / ${state.playerMaxHp}`;
-    ui.enemyHp.textContent = `${Math.ceil(state.enemyHp)} / ${state.enemyMaxHp}`;
+    ui.enemyHp.textContent = `${Math.ceil(displayEnemyHp)} / ${displayEnemyMaxHp}`;
     ui.playerHpBar.style.width = `${state.playerHp / state.playerMaxHp * 100}%`;
-    ui.enemyHpBar.style.width = `${state.enemyHp / state.enemyMaxHp * 100}%`;
+    ui.enemyHpBar.style.width = `${displayEnemyMaxHp ? displayEnemyHp / displayEnemyMaxHp * 100 : 0}%`;
+    if (ui.enemyBaseName) {
+      ui.enemyBaseName.textContent = isMikuMode()
+        ? (state.mikuTowerBroken ? "하츠네 미쿠" : "미쿠 라이브 성채")
+        : "가시왕 성채";
+    }
     ui.money.textContent = Math.floor(state.money);
     ui.moneyMax.textContent = state.maxMoney;
     ui.income.textContent = `${incomeRate().toFixed(0)} G/s`;
@@ -1788,10 +2202,8 @@
 
   function unitSprite(type) {
     const extraSprite = EXTRA_ALLY_SPRITES[type.id];
-    if (extraSprite) {
-      return extraSprite.sheet
-        ? { sheet: extraSprite.sheet, crop: extraSprite.crop, unique: true }
-        : null;
+    if (extraSprite?.sheet) {
+      return { sheet: extraSprite.sheet, crop: extraSprite.crop, unique: true };
     }
     if (type.id === "titan") {
       return rockShieldPixels
@@ -1820,11 +2232,15 @@
       const scale = Math.min((card.width - 16) / sourceW, (card.height - 4) / sourceH);
       const drawW = Math.round(sourceW * scale);
       const drawH = Math.round(sourceH * scale);
+      if (type.tint && !EXTRA_ALLY_SPRITES[type.id]?.sheet) {
+        cardCtx.filter = type.tint;
+      }
       cardCtx.drawImage(
         source.sheet,
         x1, y1, sourceW, sourceH,
         Math.round((card.width - drawW) / 2), card.height - drawH, drawW, drawH
       );
+      cardCtx.filter = "none";
       if (type.overlay && !source.unique) {
         cardCtx.globalCompositeOperation = "source-atop";
         cardCtx.fillStyle = type.overlay;
@@ -1843,9 +2259,10 @@
   function renderDeckBuilder() {
     if (!ui.deckList || !state.profile) return;
     ui.deckList.innerHTML = "";
-    const owned = UNIT_TYPES.filter((unit) => ownsUnit(unit.id));
+    const owned = modeUnits().filter((unit) => ownsUnit(unit.id));
+    const deck = activeDeckIds();
     owned.forEach((type) => {
-      const selectedIndex = state.profile.deck.indexOf(type.id);
+      const selectedIndex = deck.indexOf(type.id);
       const level = unitLevel(type.id);
       const cost = upgradeCost(type.id);
       const card = document.createElement("article");
@@ -1881,11 +2298,19 @@
       ui.deckList.appendChild(card);
       drawUnitPortrait(card.querySelector("canvas"), type);
     });
-    const countText = `${state.profile.deck.length} / ${MAX_DECK_SIZE}`;
+    const countText = `${deck.length} / ${MAX_DECK_SIZE}`;
     ui.deckCount.textContent = countText;
     ui.deckSummary.textContent = countText;
     ui.profileGold.textContent = state.profile.gold;
     ui.materialCount.textContent = state.profile.materials;
+    if (ui.deckKicker) ui.deckKicker.textContent = isRiftMode() ? "NEW MOON SQUAD" : "MOONLIGHT SQUAD";
+    if (ui.deckTitle) ui.deckTitle.textContent = isRiftMode() ? "신월 덱 편성" : "출격 덱 편성";
+    if (ui.deckSubtitle) {
+      ui.deckSubtitle.textContent = isRiftMode()
+        ? "본편 대원 + 신월 상자에서 얻은 대원을 함께 편성할 수 있습니다."
+        : "본편 대원과 신월에서 얻은 대원을 함께 편성할 수 있습니다.";
+    }
+    if (ui.deckBtnLabel) ui.deckBtnLabel.textContent = isRiftMode() ? "신월 덱 편성" : "출격 덱 편성";
   }
 
   function convertStoneToGold() {
@@ -1932,16 +2357,17 @@
   }
 
   function toggleDeckUnit(id) {
-    const index = state.profile.deck.indexOf(id);
+    const deck = activeDeckIds();
+    const index = deck.indexOf(id);
     if (index >= 0) {
-      if (state.profile.deck.length <= 1) return;
-      state.profile.deck.splice(index, 1);
+      if (deck.length <= 1) return;
+      deck.splice(index, 1);
     } else {
-      if (!ownsUnit(id) || state.profile.deck.length >= MAX_DECK_SIZE) {
+      if (!ownsUnit(id) || deck.length >= MAX_DECK_SIZE) {
         ui.deckCount.textContent = "10 / 10 MAX";
         return;
       }
-      state.profile.deck.push(id);
+      deck.push(id);
     }
     saveProfile();
     buildCards();
@@ -1980,74 +2406,258 @@
   }
 
   function updateCollectionUI() {
-    const locked = UNIT_TYPES.filter((unit) => unit.unlockable && !ownsUnit(unit.id));
-    ui.chestCount.textContent = state.profile.chests;
-    ui.collectionCount.textContent = `${state.profile.units.length} / ${UNIT_TYPES.length} 보유`;
-    ui.deckSummary.textContent = `${state.profile.deck.length} / ${MAX_DECK_SIZE}`;
+    const locked = unlockablePool().filter((unit) => !ownsUnit(unit.id));
+    const ownedCount = activeOwnedIds().length;
+    const totalCount = modeUnits().length;
+    ui.chestCount.textContent = activeChestCount();
+    ui.collectionCount.textContent = `${ownedCount} / ${totalCount} 보유`;
+    ui.deckSummary.textContent = `${activeDeckIds().length} / ${MAX_DECK_SIZE}`;
     ui.profileGold.textContent = state.profile.gold;
     ui.materialCount.textContent = state.profile.materials;
-    ui.chestOpenBtn.disabled = state.profile.chests <= 0;
-    ui.chestOpenBtn.textContent = state.profile.chests > 0 ? "상자 열기" : "상자 없음";
-    ui.chestDesc.innerHTML = state.profile.chests <= 0
-      ? "전투에서 이기면 상자를 얻습니다.<br />첫 클리어와 보스전은 상자를 더 줍니다."
-      : `상자 ${state.profile.chests}개 · 미보유 대원 ${locked.length}명<br />캐릭터 중복 시 <b>강화석 8개 + 보급 골드 180G</b>로 자동 전환됩니다.`;
+    ui.chestOpenBtn.disabled = activeChestCount() <= 0 || state.chestBusy;
+    ui.chestOpenBtn.textContent = state.chestBusy
+      ? "여는 중…"
+      : (activeChestCount() > 0 ? "상자 열기" : "상자 없음");
+    if (ui.chestBtnLabel) ui.chestBtnLabel.textContent = isRiftMode() ? "신월 상자" : "보급 상자";
+    if (ui.chestTitle) ui.chestTitle.textContent = isRiftMode() ? "신월 보급 상자" : "달빛 보급 상자";
+    if (ui.chestModeNote) {
+      ui.chestModeNote.textContent = isRiftMode()
+        ? "신월 전선에서만 획득 · 신규 대원만 등장 · 본편 상자는 주지 않음"
+        : "본편 전투에서만 획득 · 본편 대원 전용";
+    }
+    ui.chestPanel?.classList.toggle("is-rift", isRiftMode());
+    if (!state.chestBusy) {
+      ui.chestDesc.innerHTML = activeChestCount() <= 0
+        ? (isRiftMode()
+          ? "신월 전선에서 이기면 신월 상자를 얻습니다.<br />본편 달빛 상자는 여기서 나오지 않습니다."
+          : "전투에서 이기면 상자를 얻습니다.<br />첫 클리어와 보스전은 상자를 더 줍니다.")
+        : `상자 ${activeChestCount()}개 · 미보유 대원 ${locked.length}명<br />캐릭터 중복 시 <b>강화석 8개 + 보급 골드 180G</b>로 자동 전환됩니다.`;
+    }
+  }
+
+  function resetChestVisual() {
+    if (!ui.chestVisual) return;
+    ui.chestVisual.classList.remove("is-shake", "is-open", "is-burst", "hidden");
+    ui.chestReveal?.classList.add("hidden");
+    ui.chestReveal?.classList.remove("is-dupe", "is-mat", "is-gold", "is-book");
+  }
+
+  function paintChestFx(color, burst = false) {
+    const canvasEl = ui.chestFx;
+    if (!canvasEl) return;
+    const fx = canvasEl.getContext("2d");
+    if (!fx) return;
+    const w = canvasEl.width;
+    const h = canvasEl.height;
+    fx.clearRect(0, 0, w, h);
+    if (!burst) return;
+    for (let i = 0; i < 36; i++) {
+      const ang = (Math.PI * 2 * i) / 36 + Math.random() * 0.2;
+      const dist = 28 + Math.random() * 70;
+      const x = w * 0.5 + Math.cos(ang) * dist;
+      const y = h * 0.48 + Math.sin(ang) * dist * 0.7;
+      const size = 2 + Math.random() * 4;
+      fx.fillStyle = color;
+      fx.globalAlpha = 0.35 + Math.random() * 0.55;
+      fx.fillRect(Math.round(x), Math.round(y), size, size);
+    }
+    fx.globalAlpha = 1;
+  }
+
+  function showChestReveal(payload) {
+    if (!ui.chestReveal) {
+      ui.chestDesc.innerHTML = payload.html;
+      return;
+    }
+    ui.chestVisual?.classList.add("hidden");
+    ui.chestReveal.classList.remove("hidden", "is-dupe", "is-mat", "is-gold", "is-book");
+    if (payload.tone) ui.chestReveal.classList.add(payload.tone);
+    ui.chestRewardTitle.textContent = payload.title;
+    ui.chestRewardTag.textContent = payload.tag;
+    ui.chestRewardSub.textContent = payload.sub;
+    ui.chestDesc.innerHTML = payload.html;
+    if (payload.unit && ui.chestRewardPortrait) {
+      drawUnitPortrait(ui.chestRewardPortrait, payload.unit);
+    } else if (ui.chestRewardPortrait) {
+      const c = ui.chestRewardPortrait.getContext("2d");
+      c.clearRect(0, 0, ui.chestRewardPortrait.width, ui.chestRewardPortrait.height);
+      c.fillStyle = payload.color || "#ffe17b";
+      c.fillRect(36, 28, 56, 56);
+      c.fillStyle = "#1a1730";
+      c.font = "28px monospace";
+      c.textAlign = "center";
+      c.fillText(payload.icon || "★", 64, 68);
+    }
   }
 
   function openChest() {
-    if (state.profile.chests <= 0) return;
-    state.profile.chests -= 1;
+    if (state.chestBusy || activeChestCount() <= 0) return;
+    state.chestBusy = true;
+    setActiveChestCount(activeChestCount() - 1);
+    resetChestVisual();
+    paintChestFx("#fff", false);
+    ui.chestVisual?.classList.add("is-shake");
+    ui.chestOpenBtn.disabled = true;
+    ui.chestOpenBtn.textContent = "여는 중…";
+
     const roll = Math.random();
-    let resultText = "";
-    let rewardColor = "#d58cff";
+    let payload = {
+      title: "보상",
+      tag: "획득",
+      sub: "",
+      html: "",
+      color: "#d58cff",
+      tone: "",
+      icon: "✦",
+      unit: null,
+    };
 
     if (roll < 0.55) {
-      const pool = UNIT_TYPES.filter((unit) => unit.unlockable);
+      const pool = unlockablePool();
       const locked = pool.filter((unit) => !ownsUnit(unit.id));
       const pickFrom = locked.length ? locked : pool;
-      const unit = pickFrom[Math.floor(Math.random() * pickFrom.length)];
-      rewardColor = unit.shot || unit.overlay || "#d58cff";
-      if (ownsUnit(unit.id)) {
-        state.profile.duplicates[unit.id] = (Number(state.profile.duplicates[unit.id]) || 0) + 1;
+      if (!pickFrom.length) {
         state.profile.materials += 8;
         state.profile.gold += 180;
-        resultText = `<b>${unit.name} 중복!</b><br />강화석 8개와 보급 골드 180G로 전환했습니다.`;
+        payload = {
+          title: "강화석 + 골드",
+          tag: "대체 보상",
+          sub: "열 수 있는 대원이 없어 재료로 전환",
+          html: "<b>대체 보상</b><br />강화석 8개와 보급 골드 180G",
+          color: "#8fe9d2",
+          tone: "is-mat",
+          icon: "◆",
+          unit: null,
+        };
       } else {
-        state.profile.units.push(unit.id);
-        state.profile.levels[unit.id] = 1;
-        if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(unit.id);
-        resultText = `<b>${unit.name}</b> 신규 영입!<br />${unit.info}`;
+        const unit = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+        payload.color = unit.shot || "#d58cff";
+        payload.unit = unit;
+        if (ownsUnit(unit.id)) {
+          state.profile.duplicates[unit.id] = (Number(state.profile.duplicates[unit.id]) || 0) + 1;
+          state.profile.materials += 8;
+          state.profile.gold += 180;
+          payload.title = unit.name;
+          payload.tag = "중복 전환";
+          payload.sub = "강화석 8개 + 보급 골드 180G";
+          payload.tone = "is-dupe";
+          payload.html = `<b>${unit.name} 중복!</b><br />강화석 8개와 보급 골드 180G로 전환했습니다.`;
+        } else {
+          if (isRiftMode()) {
+            state.profile.riftUnits.push(unit.id);
+            if (state.profile.riftDeck.length < MAX_DECK_SIZE) state.profile.riftDeck.push(unit.id);
+            if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(unit.id);
+          } else {
+            state.profile.units.push(unit.id);
+            if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(unit.id);
+            if (state.profile.riftDeck.length < MAX_DECK_SIZE) state.profile.riftDeck.push(unit.id);
+          }
+          state.profile.levels[unit.id] = 1;
+          payload.title = unit.name;
+          payload.tag = "신규 영입";
+          payload.sub = unit.info;
+          payload.html = `<b>${unit.name}</b> 신규 영입!<br />${unit.info}`;
+        }
       }
     } else if (roll < 0.80) {
       const amount = 5 + Math.floor(Math.random() * 6);
       state.profile.materials += amount;
-      rewardColor = "#8fe9d2";
-      resultText = `<b>강화석 ${amount}개</b> 획득!<br />덱 편성 화면에서 대원을 강화할 수 있습니다.`;
+      payload = {
+        title: `강화석 ${amount}개`,
+        tag: "재료",
+        sub: "덱 편성에서 대원을 강화할 수 있습니다",
+        html: `<b>강화석 ${amount}개</b> 획득!<br />덱 편성 화면에서 대원을 강화할 수 있습니다.`,
+        color: "#8fe9d2",
+        tone: "is-mat",
+        icon: "◆",
+        unit: null,
+      };
     } else if (roll < 0.95) {
       const amount = 180 + Math.floor(Math.random() * 181);
       state.profile.gold += amount;
-      rewardColor = "#f3c45d";
-      resultText = `<b>보급 골드 ${amount}G</b> 획득!<br />대원 강화 비용으로 사용할 수 있습니다.`;
+      payload = {
+        title: `보급 골드 ${amount}G`,
+        tag: "골드",
+        sub: "대원 강화 비용으로 사용",
+        html: `<b>보급 골드 ${amount}G</b> 획득!<br />대원 강화 비용으로 사용할 수 있습니다.`,
+        color: "#f3c45d",
+        tone: "is-gold",
+        icon: "G",
+        unit: null,
+      };
     } else {
-      const candidates = state.profile.units.filter((id) => unitLevel(id) < MAX_UNIT_LEVEL);
+      const candidates = activeOwnedIds().filter((id) => unitLevel(id) < MAX_UNIT_LEVEL);
       if (candidates.length) {
         const id = candidates[Math.floor(Math.random() * candidates.length)];
         const unit = UNIT_TYPES.find((entry) => entry.id === id);
         state.profile.levels[id] = unitLevel(id) + 1;
-        rewardColor = "#fff099";
-        resultText = `<b>특급 훈련서!</b><br />${unit.name}이 비용 없이 Lv.${state.profile.levels[id]}로 강화됐습니다.`;
+        payload = {
+          title: unit.name,
+          tag: "특급 훈련서",
+          sub: `비용 없이 Lv.${state.profile.levels[id]}`,
+          html: `<b>특급 훈련서!</b><br />${unit.name}이 비용 없이 Lv.${state.profile.levels[id]}로 강화됐습니다.`,
+          color: "#fff099",
+          tone: "is-book",
+          icon: "★",
+          unit,
+        };
       } else {
         state.profile.materials += 10;
-        rewardColor = "#fff099";
-        resultText = "<b>특급 훈련서 중복!</b><br />모든 대원이 최대 레벨이라 강화석 10개로 전환했습니다.";
+        payload = {
+          title: "강화석 10개",
+          tag: "훈련서 중복",
+          sub: "모든 대원이 최대 레벨",
+          html: "<b>특급 훈련서 중복!</b><br />모든 대원이 최대 레벨이라 강화석 10개로 전환했습니다.",
+          color: "#fff099",
+          tone: "is-book",
+          icon: "★",
+          unit: null,
+        };
       }
     }
-    saveProfile();
-    burst(W * 0.5, H * 0.5, rewardColor, 42, 260);
-    sound("win");
+
+    window.setTimeout(() => {
+      ui.chestVisual?.classList.remove("is-shake");
+      ui.chestVisual?.classList.add("is-open", "is-burst");
+      paintChestFx(payload.color, true);
+      sound("upgrade");
+    }, 420);
+
+    window.setTimeout(() => {
+      showChestReveal(payload);
+      sound("win");
+      saveProfile();
+      buildCards();
+      renderDeckBuilder();
+      state.chestBusy = false;
+      updateCollectionUI();
+      window.setTimeout(() => paintChestFx(payload.color, false), 700);
+    }, 900);
+  }
+
+  function setBattleMode(mode) {
+    const next = mode === "rift" ? "rift" : (mode === "miku" ? "miku" : "campaign");
+    if (state.battleMode === next) return;
+    state.battleMode = next;
+    state.stageIndex = activeUnlocked();
+    ui.modeCampaignBtn?.classList.toggle("active", !isRiftMode() && !isMikuMode());
+    ui.modeRiftBtn?.classList.toggle("active", isRiftMode());
+    ui.modeMikuBtn?.classList.toggle("active", isMikuMode());
+    ui.modeCampaignBtn?.setAttribute("aria-selected", String(!isRiftMode() && !isMikuMode()));
+    ui.modeRiftBtn?.setAttribute("aria-selected", String(isRiftMode()));
+    ui.modeMikuBtn?.setAttribute("aria-selected", String(isMikuMode()));
+    if (ui.stageBoardLabel) {
+      ui.stageBoardLabel.textContent = isMikuMode()
+        ? "스테이지 선택 · 미쿠 라이브"
+        : (isRiftMode() ? "스테이지 선택 · 신월 전선" : "스테이지 선택 · 본편");
+    }
+    resetChestVisual();
+    ui.chestPanel?.classList.add("hidden");
+    ui.deckPanel?.classList.add("hidden");
+    renderStageList();
+    updateCollectionUI();
     buildCards();
     renderDeckBuilder();
-    updateCollectionUI();
-    ui.chestDesc.innerHTML = resultText;
   }
 
   function handleOverlayAction() {
@@ -2065,26 +2675,29 @@
   function renderStageList() {
     ui.stageList.innerHTML = "";
     let lastChapter = "";
-    STAGES.forEach((stage, index) => {
+    const stages = activeStages();
+    const chapters = activeChapters();
+    const unlocked = activeUnlocked();
+    stages.forEach((stage, index) => {
       const chapter = stage.id.split("-")[0];
       if (chapter !== lastChapter) {
         const label = document.createElement("div");
         label.className = "stage-chapter";
-        label.textContent = CHAPTERS[chapter] || `${chapter}장`;
+        label.textContent = chapters[chapter] || `${chapter}장`;
         ui.stageList.appendChild(label);
         lastChapter = chapter;
       }
-      const locked = index > state.unlocked;
+      const locked = index > unlocked;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "stage-pick";
       if (index === state.stageIndex) btn.classList.add("selected");
-      if (index < state.unlocked) btn.classList.add("cleared");
+      if (index < unlocked) btn.classList.add("cleared");
       btn.disabled = locked;
       btn.innerHTML = `
         <span class="code">${stage.id}</span>
         <span><strong>${locked ? "잠김" : stage.name}</strong><small>${locked ? "이전 스테이지 클리어 필요" : stage.stars}</small></span>
-        <span class="mark">${index === state.stageIndex ? "▶" : (index < state.unlocked ? "OK" : "LOCK")}</span>`;
+        <span class="mark">${index === state.stageIndex ? "▶" : (index < unlocked ? "OK" : "LOCK")}</span>`;
       btn.addEventListener("click", () => {
         if (locked) return;
         state.stageIndex = index;
@@ -2094,6 +2707,9 @@
     });
   }
 
+  ui.modeCampaignBtn?.addEventListener("click", () => setBattleMode("campaign"));
+  ui.modeRiftBtn?.addEventListener("click", () => setBattleMode("rift"));
+  ui.modeMikuBtn?.addEventListener("click", () => setBattleMode("miku"));
   ui.gameStartBtn.addEventListener("click", startGame);
   ui.howBtn.addEventListener("click", () => {
     ui.chestPanel.classList.add("hidden");
@@ -2114,6 +2730,8 @@
   ui.chestBtn.addEventListener("click", () => {
     ui.howPanel.classList.add("hidden");
     ui.deckPanel.classList.add("hidden");
+    resetChestVisual();
+    paintChestFx("#fff", false);
     ui.chestPanel.classList.remove("hidden");
     updateCollectionUI();
   });
@@ -2206,10 +2824,18 @@
     { filter: "brightness(.78) contrast(1.16) saturate(1.2)", veil: "rgba(80, 20, 35, .1)" },
   ];
 
+  function stageChapterPart(stage = currentStage()) {
+    const raw = String(stage?.id || "1-1");
+    const cleaned = raw.startsWith("R") || raw.startsWith("M") ? raw.slice(1) : raw;
+    const [chapterText, partText] = cleaned.split("-");
+    return {
+      chapter: clamp(Number(chapterText) || 1, 1, 8),
+      part: clamp(Number(partText) || 1, 1, 5),
+    };
+  }
+
   function drawStageAtmosphere() {
-    const [chapterText, partText] = currentStage().id.split("-");
-    const chapter = clamp(Number(chapterText) || 1, 1, STAGE_PALETTES.length);
-    const part = clamp(Number(partText) || 1, 1, 5);
+    const { chapter, part } = stageChapterPart();
     const [tint, weather] = STAGE_PALETTES[chapter - 1];
     ctx.save();
     ctx.globalCompositeOperation = "multiply";
@@ -2269,9 +2895,7 @@
   function drawBackground() {
     ctx.fillStyle = "#0b1220";
     ctx.fillRect(0, 0, W, H);
-    const [chapterText, partText] = currentStage().id.split("-");
-    const chapter = clamp(Number(chapterText) || 1, 1, stageBackgrounds.length);
-    const part = clamp(Number(partText) || 1, 1, 5);
+    const { chapter, part } = stageChapterPart();
     const scene = stageBackgrounds[chapter - 1] || bg;
     const variant = STAGE_VARIANTS[part - 1];
     if (scene.complete && scene.naturalWidth) {
@@ -2611,6 +3235,7 @@
   }
 
   function drawPixelBase(team) {
+    if (isMikuMode() && drawMikuPixelBase(team)) return;
     const ally = team === "ally";
     const x = ally ? PLAYER_BASE_X : ENEMY_BASE_X;
     const hp = ally ? state.playerHp : state.enemyHp;
@@ -2668,15 +3293,44 @@
     ctx.restore();
   }
 
+  function drawMikuPixelBase(team) {
+    const image = mikuTowerPixels;
+    if (!image || ("complete" in image && (!image.complete || !image.naturalWidth))) return false;
+    const ally = team === "ally";
+    const hp = ally ? state.playerHp : state.enemyHp;
+    const maxHp = ally ? state.playerMaxHp : state.enemyMaxHp;
+    const broken = !ally && state.mikuTowerBroken;
+    const damaged = broken || hp < maxHp * 0.5;
+    const sourceW = Math.floor((image.naturalWidth || image.width) / 2);
+    const sourceH = Math.floor((image.naturalHeight || image.height) / 2);
+    const sourceX = damaged ? sourceW : 0;
+    const sourceY = ally ? 0 : sourceH;
+    const drawSize = Math.round(238 * VIEW_SCALE);
+    const x = ally ? PLAYER_BASE_X : ENEMY_BASE_X;
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = broken ? 0.48 : 1;
+    ctx.translate(Math.round(x), Math.round(GROUND + 10 * VIEW_SCALE));
+    ctx.drawImage(
+      image,
+      sourceX, sourceY, sourceW, sourceH,
+      Math.round(-drawSize / 2), -drawSize, drawSize, drawSize
+    );
+    ctx.restore();
+    return true;
+  }
+
   function drawPixelFighter(actor) {
     const ally = actor.team === "ally";
     const extraAllySprite = ally ? EXTRA_ALLY_SPRITES[actor.id] : null;
     const extraEnemySprite = ally ? null : EXTRA_ENEMY_SPRITES[actor.id];
-    if ((extraAllySprite && !extraAllySprite.sheet) || (extraEnemySprite && !extraEnemySprite.sheet)) return;
-    const extraSheet = extraAllySprite?.sheet || extraEnemySprite?.sheet || null;
+    // Extra sprite registered but not loaded yet → fall through to atlas instead of skipping draw.
+    const extraReady = (extraAllySprite && extraAllySprite.sheet) || (extraEnemySprite && extraEnemySprite.sheet);
+    const extraSheet = extraReady ? (extraAllySprite?.sheet || extraEnemySprite?.sheet) : null;
     const isRockShield = ally && actor.id === "titan";
     const unlockIndex = ally ? UNLOCKABLE_SPRITE_INDEX[actor.id] : undefined;
-    const hasUnlockableSprite = ally && unlockIndex !== undefined;
+    const hasUnlockableSprite = ally && unlockIndex !== undefined && !extraSheet;
     const hasUniqueSprite = Boolean(extraSheet) || isRockShield || hasUnlockableSprite;
     const sheet = extraSheet
       || (isRockShield
@@ -2686,9 +3340,9 @@
     const index = ally
       ? (ALLY_SPRITE_INDEX[actor.kind] ?? actor.sprite ?? 0)
       : (ENEMY_SPRITE_INDEX[actor.kind] ?? actor.sprite ?? 0);
-    const crop = extraAllySprite
+    const crop = (extraReady && extraAllySprite)
       ? extraAllySprite.crop
-      : (extraEnemySprite
+      : ((extraReady && extraEnemySprite)
         ? extraEnemySprite.crop
         : (isRockShield
           ? ROCK_SHIELD_CROP
@@ -2706,7 +3360,8 @@
       : 0;
     const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
     const deathT = clamp(actor.death / 0.7, 0, 1);
-    const drawH = Math.round(actor.size * (ally ? 3.45 : 3.35));
+    const drawScale = (extraAllySprite?.fitScale || extraEnemySprite?.fitScale || 1);
+    const drawH = Math.round(actor.size * (ally ? 3.45 : 3.35) * drawScale);
     const drawW = Math.round(drawH * sourceW / sourceH);
     const jump = actor.dead ? 0 : Math.round(
       actor.moving ? Math.abs(walk) * 5 : (idle + 1) * 0.7
@@ -2717,11 +3372,13 @@
     const spawnScale = easeOut(actor.spawnAnim);
     const bounce = actor.moving ? 1 + Math.abs(walk) * 0.03 : 1;
     const bodyTilt = actor.moving ? walk * 0.02 : idle * 0.004;
+    const flipSpriteX = Boolean(extraEnemySprite?.flipX);
 
     ctx.save();
     ctx.translate(Math.round(actor.x + lunge + recoilOffset), Math.round(actor.y - jump));
     ctx.scale(spawnScale * bounce, spawnScale * bounce);
     ctx.rotate(bodyTilt);
+    if (flipSpriteX) ctx.scale(-1, 1);
     ctx.globalAlpha = actor.dead ? 1 - deathT : 1;
     if (actor.dead) {
       ctx.translate(0, -drawH * 0.3);
@@ -2741,7 +3398,8 @@
     }
     if (actor.hitFlash > 0) {
       ctx.filter = "brightness(2.4) saturate(.2)";
-    } else if (actor.tint && !uniqueAlly) {
+    } else if (actor.tint && (!extraSheet || extraAllySprite?.allowTint || extraEnemySprite?.allowTint)) {
+      // 솔리드 월울프 등은 tint로 색만 바꾸고, 일반 EXTRA는 원본 색 유지.
       ctx.filter = actor.tint;
     }
     ctx.drawImage(
@@ -2947,9 +3605,14 @@
       if (remote?.profile && remote.updatedAt > localTime) {
         state.profile = normalizeProfile(remote.profile);
         state.unlocked = Math.max(0, Math.min(STAGES.length - 1, Number(remote.unlocked) || 0));
+        state.unlockedRift = Math.max(0, Math.min(Math.max(RIFT_STAGES.length - 1, 0), Number(remote.unlockedRift) || 0));
+        state.unlockedMiku = Math.max(0, Math.min(Math.max(MIKU_STAGES.length - 1, 0), Number(remote.unlockedMiku) || 0));
         localStorage.setItem(PROFILE_KEY, JSON.stringify(state.profile));
         localStorage.setItem(SAVE_KEY, String(state.unlocked));
+        localStorage.setItem(RIFT_SAVE_KEY, String(state.unlockedRift));
+        localStorage.setItem(MIKU_SAVE_KEY, String(state.unlockedMiku));
         localStorage.setItem(LOCAL_UPDATED_KEY, String(remote.updatedAt));
+        state.stageIndex = Math.min(state.stageIndex, activeUnlocked());
         buildCards();
         renderStageList();
         updateCollectionUI();
