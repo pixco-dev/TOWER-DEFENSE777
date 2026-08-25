@@ -235,6 +235,9 @@
   EXTRA_ENEMY_SPRITES.miku_diva = MIKU_BOSS_FRAMES.idleA;
   const RIFT_ALLY_SPRITES = {};
   const RIFT_ENEMY_SPRITES = {};
+  // Sprite images can finish loading before `state` is initialized. UI refreshes
+  // must wait until the runtime is ready or the entire menu bootstrap aborts.
+  let spriteUiReady = false;
   const bindExtraSprite = (sprite, refreshUi) => {
     sprite.image.addEventListener("load", () => {
       // PNGs are pre-keyed. Never strip interiors or dark fur/armor at runtime.
@@ -242,7 +245,7 @@
       if (!sprite.crop || sprite.crop[2] <= sprite.crop[0]) {
         sprite.crop = [0, 0, sprite.image.naturalWidth || 320, sprite.image.naturalHeight || 360];
       }
-      if (refreshUi) {
+      if (refreshUi && spriteUiReady) {
         renderCardPortraits();
         renderDeckBuilder();
       }
@@ -291,7 +294,7 @@
       const apply = () => {
         entry.sheet = entry.image;
         entry.crop = [0, 0, entry.image.naturalWidth, entry.image.naturalHeight];
-        if (refreshUi) {
+        if (refreshUi && spriteUiReady) {
           if (typeof renderCardPortraits === "function") renderCardPortraits();
           if (typeof renderDeckBuilder === "function") renderDeckBuilder();
         }
@@ -845,7 +848,9 @@
   const STONE_SELL_GOLD = 50;
   const STONE_BUY_GOLD = 70;
   const STARTER_UNITS = UNIT_TYPES.filter((unit) => !unit.unlockable && !unit.rift).map((unit) => unit.id);
-  const RIFT_STARTER_UNITS = []; // 신월 대원은 상자로만 획득
+  // 신월 전선은 본편과 완전히 분리하되, 첫 상자를 얻기 전에도 전투와
+  // 덱 편성이 가능하도록 전용 스타터 3명을 지급한다.
+  const RIFT_STARTER_UNITS = ["breeze_squirrel", "crystal_raccoon", "flame_fox"];
   const CAMPAIGN_UNIT_IDS = new Set(UNIT_TYPES.filter((unit) => !unit.rift).map((unit) => unit.id));
   const RIFT_UNIT_IDS = new Set(UNIT_TYPES.filter((unit) => unit.rift).map((unit) => unit.id));
   const LEGACY_UNIT_MIGRATIONS = {
@@ -864,18 +869,9 @@
       const savedUnits = migrateUnitIds(Array.isArray(saved.units) ? saved.units : [])
         .filter((id) => CAMPAIGN_UNIT_IDS.has(id));
       const units = [...new Set([...STARTER_UNITS, ...savedUnits])];
-      // 예전에 무료로 풀려 있던 신월 스타터는 유지하지 않음 — 상자 획득분만 인정
       const savedRiftUnits = migrateUnitIds(Array.isArray(saved.riftUnits) ? saved.riftUnits : [])
         .filter((id) => RIFT_UNIT_IDS.has(id));
-      // 초기에 잘못 무료 지급했던 5종은 한 번 회수 (이후 상자 획득분은 유지)
-      const FREE_RIFT_PREVIEW = new Set([
-        "flame_fox", "crystal_raccoon", "breeze_squirrel", "gold_mole", "silver_fox",
-      ]);
-      let riftUnits = [...new Set(savedRiftUnits)];
-      const riftGrantRevoked = Boolean(saved.riftGrantRevoked);
-      if (!riftGrantRevoked) {
-        riftUnits = riftUnits.filter((id) => !FREE_RIFT_PREVIEW.has(id));
-      }
+      const riftUnits = [...new Set([...RIFT_STARTER_UNITS, ...savedRiftUnits])];
       const ownedCampaign = new Set(units);
       const ownedRift = new Set(riftUnits);
       const ownedAll = new Set([...ownedCampaign, ...ownedRift]);
@@ -1181,6 +1177,7 @@
   state.unlockedRift = loadRiftUnlock();
   state.unlockedMiku = loadMikuUnlock();
   state.stageIndex = state.unlocked;
+  spriteUiReady = true;
 
   let audioCtx = null;
   function sound(type) {
@@ -2591,11 +2588,9 @@
           if (isRiftMode()) {
             state.profile.riftUnits.push(unit.id);
             if (state.profile.riftDeck.length < MAX_DECK_SIZE) state.profile.riftDeck.push(unit.id);
-            if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(unit.id);
           } else {
             state.profile.units.push(unit.id);
             if (state.profile.deck.length < MAX_DECK_SIZE) state.profile.deck.push(unit.id);
-            if (state.profile.riftDeck.length < MAX_DECK_SIZE) state.profile.riftDeck.push(unit.id);
           }
           state.profile.levels[unit.id] = 1;
           payload.title = unit.name;
