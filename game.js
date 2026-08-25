@@ -132,13 +132,11 @@
   const unlockableSheet = new Image();
   const rockShieldSheet = new Image();
   const enemySheet = new Image();
-  const mikuEnemySheet = new Image();
   const mikuTowerSheet = new Image();
   let allyPixels = null;
   let unlockablePixels = null;
   let rockShieldPixels = null;
   let enemyPixels = null;
-  let mikuEnemyPixels = null;
   let mikuTowerPixels = null;
 
   const STAGE_BACKGROUND_FILES = [
@@ -154,64 +152,89 @@
   stageBackgrounds.forEach((image, index) => {
     image.src = STAGE_BACKGROUND_FILES[index];
   });
-  allySheet.src = "assets/pixel-allies-keyed.png?v=2";
-  unlockableSheet.src = "assets/pixel-allies-unlockables-v4.png";
-  rockShieldSheet.src = "assets/pixel-ally-rockshield-v1.png?v=2";
-  enemySheet.src = "assets/pixel-enemies-keyed.png?v=2";
+  allySheet.src = "assets/pixel-allies-keyed.png?v=3";
+  unlockableSheet.src = "assets/pixel-allies-unlockables-v4.png?v=17";
+  rockShieldSheet.src = "assets/pixel-ally-rockshield-v2.png";
+  enemySheet.src = "assets/pixel-enemies-keyed.png?v=3";
 
+  const candidateSprite = (file, options = {}) => ({
+    image: new Image(),
+    src: `assets/candidates/unified-v1/${file}.png?v=2`,
+    crop: null,
+    ...options,
+  });
+
+  // 본편과 신월 전선은 별도 표를 사용한다. 같은 ID가 있어도 서로 덮어쓰지 않는다.
   const EXTRA_ALLY_SPRITES = {
-    lightning_otter: { image: new Image(), src: "assets/pixel-ally-lightning-otter-v1.png?v=2", crop: [18, 107, 366, 380] },
-    gale_hawk: { image: new Image(), src: "assets/pixel-ally-gale-hawk-v3.png?v=2", crop: [138, 158, 920, 789] },
-    herb_hedgehog: { image: new Image(), src: "assets/pixel-ally-herb-hedgehog-v1.png?v=2", crop: [18, 106, 366, 380] },
-    squirrel_scout: { image: new Image(), src: "assets/pixel-ally-squirrel-scout-v1.png?v=2", crop: [135, 230, 933, 807] },
-    bomber: { image: new Image(), src: "assets/pixel-ally-bomber-v1.png?v=2", crop: [177, 163, 847, 848] },
-    sniper: { image: new Image(), src: "assets/pixel-ally-sniper-v1.png?v=2", crop: [198, 223, 812, 815] },
-    drummer: { image: new Image(), src: "assets/pixel-ally-drummer-v1.png?v=2", crop: [174, 120, 828, 826] },
-    scout: { image: new Image(), src: "assets/pixel-ally-scout-v1.png?v=2", crop: [263, 300, 736, 739] },
+    moco: candidateSprite("ally-boksuli"),
+    shield: candidateSprite("ally-shield-bean"),
+    archer: candidateSprite("ally-slingshot-cat"),
+    ram: candidateSprite("ally-ram-charger"),
+    mage: candidateSprite("ally-starlight-mage"),
+    bomber: candidateSprite("ally-firework-mage"),
+    sniper: candidateSprite("ally-moon-shadow"),
+    titan: candidateSprite("ally-rock-shield"),
+    drummer: candidateSprite("ally-war-drum-cat"),
+    scout: candidateSprite("ally-scout-cat"),
+    moon_cleric: candidateSprite("ally-moon-priest"),
+    night_fox: candidateSprite("ally-night-fox"),
+    frost_owl: candidateSprite("ally-frost-owl"),
+    sun_lion: candidateSprite("ally-sun-lion"),
+    raccoon_bomber: candidateSprite("ally-bomber-raccoon"),
+    lynx_sniper: candidateSprite("ally-crossbow-lynx"),
+    wolverine: candidateSprite("ally-steel-claw"),
+    armadillo: candidateSprite("ally-armored-armadillo"),
+    monkey_drummer: candidateSprite("ally-drummer-monkey"),
+    squirrel_scout: candidateSprite("ally-spear-squirrel"),
+    lightning_otter: candidateSprite("ally-lightning-otter"),
+    gale_hawk: candidateSprite("ally-gale-hawk"),
+    herb_hedgehog: candidateSprite("ally-herb-hedgehog"),
   };
-  // 월울프 PNG는 늑대 계열에만. 여우/송곳니는 mist_fox, 주술사는 본편 시트.
-  const SOLID_WOLF_CROP = [200, 210, 835, 810];
-  const SOLID_WOLF_SRC = "assets/pixel-enemy-moon-wolf-v1.png?v=2";
-  const makeSolidWolf = () => ({
-    image: new Image(),
-    src: SOLID_WOLF_SRC,
-    crop: SOLID_WOLF_CROP.slice(),
-    fitScale: 1.12,
-    allowTint: true,
-  });
-  const makeMistFox = () => ({
-    image: new Image(),
-    src: "assets/pixel-enemy-mist-fox-v1.png?v=3",
-    crop: [117, 181, 942, 825],
-    fitScale: 1.05,
-    allowTint: true,
-  });
+
   const EXTRA_ENEMY_SPRITES = {
-    bloodwing_bat: { image: new Image(), src: "assets/pixel-enemy-bloodwing-bat-v3.png?v=1", crop: [18, 168, 366, 380], fitScale: 0.92 },
-    bone_raven: { image: new Image(), src: "assets/pixel-enemy-bone-raven-v3.png", crop: [18, 109, 366, 380] },
-    siege_rhino: { image: new Image(), src: "assets/pixel-enemy-siege-rhino-v3.png?v=1", crop: [18, 182, 366, 380] },
-    mooncap_witch: { image: new Image(), src: "assets/pixel-enemy-mooncap-witch-v3.png?v=1", crop: [18, 58, 366, 380] },
-    fang: makeMistFox(),
-    wolf: makeSolidWolf(),
-    moon_wolf: makeSolidWolf(),
-    wraith: makeMistFox(),
-    shadow_bat: {
-      image: new Image(),
-      src: "assets/pixel-enemy-bloodwing-bat-v3.png?v=1",
-      crop: [18, 168, 366, 380],
-      fitScale: 0.88,
-      allowTint: true,
-    },
-    moss_toad: { image: new Image(), src: "assets/pixel-enemy-shell-toad-v1.png?v=2", crop: [83, 154, 946, 853] },
-    burrow_mole: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png?v=2", crop: [28, 246, 943, 812] },
-    gloom_mole: { image: new Image(), src: "assets/pixel-enemy-spitter-mole-v1.png?v=2", crop: [28, 246, 943, 812] },
-    thorn_elder: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png?v=2", crop: [64, 151, 1000, 868] },
-    thorn_bishop: { image: new Image(), src: "assets/pixel-enemy-thorn-shaman-v1.png?v=2", crop: [64, 151, 1000, 868] },
-    iron_colossus: { image: new Image(), src: "assets/pixel-enemy-iron-giant-v1.png?v=2", crop: [249, 69, 806, 910] },
-    mist_fox: { image: new Image(), src: "assets/pixel-enemy-mist-fox-v1.png?v=3", crop: [117, 181, 942, 825] },
-    thorn_king: { image: new Image(), src: "assets/pixel-enemy-thorn-king-v1.png?v=2", crop: [140, 132, 954, 843] },
-    dusk_lord: { image: new Image(), src: "assets/pixel-enemy-nightlord-v1.png?v=2", crop: [172, 128, 965, 873] },
+    sprout: candidateSprite("enemy-sprout-boar"),
+    swarm: candidateSprite("enemy-sprout-boar", { allowTint: true, fitScale: 0.9 }),
+    fang: candidateSprite("enemy-red-fang"),
+    wolf: candidateSprite("enemy-moon-wolf"),
+    brute: candidateSprite("enemy-stone-golem"),
+    shell: candidateSprite("enemy-shell-toad"),
+    spitter: candidateSprite("enemy-spitter-mole"),
+    toxic: candidateSprite("enemy-spitter-mole", { allowTint: true }),
+    shaman: candidateSprite("enemy-thorn-shaman"),
+    priest: candidateSprite("enemy-thorn-shaman", { allowTint: true }),
+    jugger: candidateSprite("enemy-iron-giant"),
+    wraith: candidateSprite("enemy-mist-fox"),
+    boss: candidateSprite("enemy-thorn-king"),
+    king: candidateSprite("enemy-thorn-prince"),
+    nightlord: candidateSprite("enemy-nightlord"),
+    bloodwing_bat: candidateSprite("enemy-bloodwing-bat", { fitScale: 0.92 }),
+    bone_raven: candidateSprite("enemy-bone-raven"),
+    siege_rhino: candidateSprite("enemy-siege-rhino"),
+    mooncap_witch: candidateSprite("enemy-mooncap-witch"),
+    moon_wolf: candidateSprite("enemy-moon-wolf"),
+    moss_toad: candidateSprite("enemy-shell-toad"),
+    burrow_mole: candidateSprite("enemy-spitter-mole"),
+    gloom_mole: candidateSprite("enemy-spitter-mole", { allowTint: true }),
+    thorn_elder: candidateSprite("enemy-thorn-shaman"),
+    thorn_bishop: candidateSprite("enemy-thorn-shaman", { allowTint: true }),
+    iron_colossus: candidateSprite("enemy-iron-giant"),
+    mist_fox: candidateSprite("enemy-mist-fox"),
+    thorn_king: candidateSprite("enemy-thorn-prince"),
+    dusk_lord: candidateSprite("enemy-nightlord"),
   };
+  // 미쿠는 여러 유닛이 아니라 하나의 보스다. 아래 이미지는 모두 같은
+  // 보스의 행동 프레임이며 별도 적으로 등록하지 않는다.
+  const MIKU_BOSS_FRAMES = {
+    idleA: candidateSprite("miku-diva", { fitScale: 1.12, flipX: true }),
+    idleB: candidateSprite("miku-idle-b", { fitScale: 1.12, flipX: true }),
+    song: candidateSprite("miku-note", { fitScale: 1.08, flipX: true }),
+    leek: candidateSprite("miku-leek", { fitScale: 1.06, flipX: true }),
+    guard: candidateSprite("miku-speaker", { fitScale: 1.05, flipX: true }),
+    cannon: candidateSprite("miku-cannon", { fitScale: 0.98 }),
+  };
+  EXTRA_ENEMY_SPRITES.miku_diva = MIKU_BOSS_FRAMES.idleA;
+  const RIFT_ALLY_SPRITES = {};
+  const RIFT_ENEMY_SPRITES = {};
   const bindExtraSprite = (sprite, refreshUi) => {
     sprite.image.addEventListener("load", () => {
       // PNGs are pre-keyed. Never strip interiors or dark fur/armor at runtime.
@@ -234,6 +257,9 @@
   };
   for (const sprite of Object.values(EXTRA_ALLY_SPRITES)) bindExtraSprite(sprite, true);
   for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) bindExtraSprite(sprite, false);
+  for (const sprite of Object.values(MIKU_BOSS_FRAMES)) {
+    if (sprite !== MIKU_BOSS_FRAMES.idleA) bindExtraSprite(sprite, false);
+  }
 
   function montageCellCrop(img, index, cols = 4, rows = 2) {
     const w = img.naturalWidth || 1024;
@@ -258,48 +284,13 @@
   function bindRiftMontageSprites() {
     const roster = window.FurRiftRoster;
     if (!roster?.ALLIES?.length) return;
-    const RIFT_CROP = [0, 0, 320, 360];
-    // The extracted rift PNGs share a 320x360 canvas, but their opaque art has
-    // different top/bottom padding. Keep the common canvas (so relative sizes
-    // stay meaningful) and compensate only for that padding while drawing.
-    const RIFT_SPRITE_VERTICAL_BOUNDS = {
-      blackflame_fox: [0.1444, 0.8556], bloom_deer: [0.0778, 0.9194],
-      bone_boar: [0.3444, 0.9444], breeze_squirrel: [0.1333, 0.8639],
-      briar_spider: [0.1861, 0.8139], crystal_giant: [0.0889, 0.9111],
-      crystal_rabbit: [0.0611, 0.9389], crystal_raccoon: [0.1250, 0.8750],
-      dusk_fox: [0.1083, 0.8889], dusk_quill: [0.1833, 0.8139],
-      ember_boar: [0.2667, 0.9444], ember_otter: [0.1306, 0.8667],
-      flame_fox: [0.0778, 0.9222], fog_crow: [0.1333, 0.8639],
-      frost_bear: [0.1083, 0.8917], frost_boar: [0.3778, 0.9444],
-      gold_eagle: [0.1000, 0.8972], gold_mole: [0.1333, 0.8639],
-      holy_deer: [0.1167, 0.8806], iron_boar: [0.4222, 0.9444],
-      iron_turtle: [0.1028, 0.8972], lava_bear: [0.1917, 0.8056],
-      lava_toad: [0.1972, 0.8028], leaf_panda: [0.1833, 0.8139],
-      moon_fox: [0.1083, 0.8889], moon_hag: [0.0778, 0.9222],
-      moss_boar: [0.4111, 0.9444], mud_golem: [0.0778, 0.9222],
-      night_moth: [0.1639, 0.8361], pike_goat: [0.1056, 0.8944],
-      poison_frog: [0.175, 0.825], poison_quill: [0.0806, 0.9167],
-      rotwood: [0.0833, 0.9139], shade_raccoon: [0.0778, 0.9222],
-      shadow_bat: [0.2111, 0.7889], shadow_wolf: [0.1528, 0.8472],
-      silver_fox: [0.1111, 0.8861], spark_mouse: [0.175, 0.825],
-      spike_boar: [0.3444, 0.9444], spore_rat: [0.1444, 0.8556],
-      star_owl: [0.125, 0.8722], storm_hawk: [0.1611, 0.8361],
-      swamp_croc: [0.275, 0.725], thorn_fox: [0.1583, 0.8417],
-      thorn_rhino: [0.175, 0.825], thunder_lion: [0.0889, 0.9083],
-      venom_spider: [0.1889, 0.8083], wave_otter: [0.1750, 0.8250],
-    };
-    const bindOne = (id, into, refreshUi, fitScale = 1.32) => {
-      const entry = {
-        image: new Image(),
-        src: `assets/rift/${id}.png?v=15`,
-        crop: RIFT_CROP,
-        fitScale,
-        verticalBounds: RIFT_SPRITE_VERTICAL_BOUNDS[id] || [0, 1],
-      };
+    const bindOne = (id, into, refreshUi, prefix, fitScale = 1) => {
+      const fileId = id.replaceAll("_", "-");
+      const entry = candidateSprite(`${prefix}-${fileId}`, { fitScale });
       into[id] = entry;
       const apply = () => {
         entry.sheet = entry.image;
-        entry.crop = [0, 0, entry.image.naturalWidth || 320, entry.image.naturalHeight || 360];
+        entry.crop = [0, 0, entry.image.naturalWidth, entry.image.naturalHeight];
         if (refreshUi) {
           if (typeof renderCardPortraits === "function") renderCardPortraits();
           if (typeof renderDeckBuilder === "function") renderDeckBuilder();
@@ -309,21 +300,9 @@
       entry.image.src = entry.src;
       if (entry.image.complete && entry.image.naturalWidth) apply();
     };
-    // 늑대만 월울프, 여우/송곳니는 mist_fox (색만 바꾼 늑대 양산 방지)
-    const solidWolfIds = ["ember_wolf", "shadow_wolf"];
-    const mistFoxIds = ["ice_fang", "thorn_fox", "blackflame_fox"];
-    for (const id of solidWolfIds) {
-      EXTRA_ENEMY_SPRITES[id] = makeSolidWolf();
-      bindExtraSprite(EXTRA_ENEMY_SPRITES[id], false);
-    }
-    for (const id of mistFoxIds) {
-      EXTRA_ENEMY_SPRITES[id] = makeMistFox();
-      bindExtraSprite(EXTRA_ENEMY_SPRITES[id], false);
-    }
-    for (const unit of roster.ALLIES) bindOne(unit.id, EXTRA_ALLY_SPRITES, true, 1.0);
+    for (const unit of roster.ALLIES) bindOne(unit.id, RIFT_ALLY_SPRITES, true, "rift-ally");
     for (const id of Object.keys(roster.ENEMIES || {})) {
-      if (solidWolfIds.includes(id) || mistFoxIds.includes(id) || EXTRA_ENEMY_SPRITES[id]) continue;
-      bindOne(id, EXTRA_ENEMY_SPRITES, false, 1.06);
+      bindOne(id, RIFT_ENEMY_SPRITES, false, "rift-enemy", 1.03);
     }
   }
   bindRiftMontageSprites();
@@ -342,15 +321,6 @@
     [1065, 273, 1493, 810],
   ];
 
-  const MIKU_ENEMY_IDS = [
-    "miku_diva", "miku_leek", "miku_speaker", "miku_note",
-    "miku_lance", "miku_frost", "miku_archer", "miku_cannon",
-  ];
-  const MIKU_ENEMY_CROPS = [
-    [20, 211, 311, 516], [343, 228, 686, 512], [686, 217, 1029, 513], [1029, 211, 1361, 514],
-    [5, 581, 343, 912], [348, 601, 681, 914], [686, 596, 1029, 912], [1029, 618, 1367, 912],
-  ];
-
   const UNLOCKABLE_SPRITE_INDEX = {
     moon_cleric: 0, night_fox: 1, frost_owl: 2, sun_lion: 3, raccoon_bomber: 4,
     lynx_sniper: 5, wolverine: 6, armadillo: 7, monkey_drummer: 8, squirrel_scout: 9,
@@ -361,7 +331,7 @@
     [0, 570, 307, 860], [312, 573, 608, 860], [629, 570, 907, 860],
     [928, 585, 1221, 860], [1222, 594, 1536, 860],
   ];
-  const ROCK_SHIELD_CROP = [205, 242, 1049, 981];
+  const ROCK_SHIELD_CROP = [0, 0, 316, 270];
 
   function removeAtlasBackground(image) {
     const surface = document.createElement("canvas");
@@ -491,23 +461,10 @@
   enemySheet.addEventListener("load", () => {
     enemyPixels = enemySheet;
   });
-  mikuEnemySheet.addEventListener("load", () => {
-    // v2는 실제 알파 PNG라 file://에서도 캔버스 보정 없이 그대로 쓸 수 있다.
-    mikuEnemyPixels = mikuEnemySheet;
-    MIKU_ENEMY_IDS.forEach((id, index) => {
-      EXTRA_ENEMY_SPRITES[id] = {
-        image: mikuEnemySheet,
-        sheet: mikuEnemyPixels,
-        crop: MIKU_ENEMY_CROPS[index],
-        fitScale: id === "miku_diva" ? 1.12 : 0.96,
-        flipX: true,
-      };
-    });
-  });
   mikuTowerSheet.addEventListener("load", () => {
     mikuTowerPixels = mikuTowerSheet;
   });
-  // 미쿠 라이브는 제작 중이므로 공개 신월 배포에서는 에셋 로드를 보류한다.
+  mikuTowerSheet.src = "assets/pixel-miku-towers-v2.png?v=1";
 
   const UNIT_TYPES = [
     {
@@ -793,41 +750,9 @@
 
   Object.assign(ENEMY_TYPES, {
     miku_diva: {
-      id: "miku_diva", name: "하츠네 미쿠", hp: 4300, damage: 138, speed: 28,
-      range: 245, cooldown: 1.15, size: 88, reward: 900, kind: "miku_diva",
-      projectile: true, splash: 78, shot: "#41e6d5", raid: true,
-    },
-    miku_leek: {
-      id: "miku_leek", name: "대파 블레이드", hp: 330, damage: 43, speed: 67,
-      range: 46, cooldown: 0.58, size: 59, reward: 48, kind: "miku_leek", cleave: 38,
-    },
-    miku_speaker: {
-      id: "miku_speaker", name: "스피커 가디언", hp: 1160, damage: 54, speed: 18,
-      range: 55, cooldown: 1.32, size: 72, reward: 142, kind: "miku_speaker", cleave: 76,
-    },
-    miku_note: {
-      id: "miku_note", name: "음표 메이지", hp: 470, damage: 68, speed: 28,
-      range: 238, cooldown: 1.38, size: 62, reward: 82, kind: "miku_note",
-      projectile: true, splash: 48, heal: 42, shot: "#ff4faf",
-    },
-    miku_lance: {
-      id: "miku_lance", name: "리듬 랜서", hp: 720, damage: 88, speed: 37,
-      range: 68, cooldown: 0.96, size: 66, reward: 102, kind: "miku_lance", cleave: 64,
-    },
-    miku_frost: {
-      id: "miku_frost", name: "스노우 보컬", hp: 560, damage: 62, speed: 24,
-      range: 225, cooldown: 1.48, size: 66, reward: 98, kind: "miku_frost",
-      projectile: true, slow: 2.8, shot: "#83dcff",
-    },
-    miku_archer: {
-      id: "miku_archer", name: "네온 아처", hp: 390, damage: 112, speed: 30,
-      range: 315, cooldown: 1.72, size: 63, reward: 112, kind: "miku_archer",
-      projectile: true, critChance: 0.2, critPower: 1.75, shot: "#5ff4ef",
-    },
-    miku_cannon: {
-      id: "miku_cannon", name: "라이브 캐논", hp: 980, damage: 146, speed: 17,
-      range: 285, cooldown: 2.1, size: 78, reward: 176, kind: "miku_cannon",
-      projectile: true, splash: 126, siege: 1.9, shot: "#ff5ab6",
+      id: "miku_diva", name: "하츠네 미쿠", hp: 6200, damage: 152, speed: 31,
+      range: 255, cooldown: 1.08, size: 92, reward: 1200, kind: "miku_diva",
+      projectile: true, splash: 82, shot: "#41e6d5", raid: true,
     },
   });
 
@@ -901,11 +826,11 @@
     M1: "특별 무대 · 네온 라이브 침공",
   };
   const MIKU_STAGES = [
-    S("M1-1", "첫 번째 사운드 체크", "★☆☆", 3600, 2400, 250, 13, 2.2, [["miku_leek", 0.48], ["miku_note", 0.3], ["miku_speaker", 0.22]], null, 0.9),
-    S("M1-2", "대파 비트 러시", "★★☆", 3800, 3000, 240, 16, 2.0, [["miku_leek", 0.38], ["miku_lance", 0.32], ["miku_note", 0.3]], null, 1.0),
-    S("M1-3", "푸른 조명의 합주", "★★☆", 4100, 3700, 235, 18, 1.82, [["miku_speaker", 0.25], ["miku_frost", 0.28], ["miku_archer", 0.25], ["miku_leek", 0.22]], null, 1.12),
-    S("M1-4", "네온 앙코르", "★★★", 4400, 4500, 230, 20, 1.68, [["miku_lance", 0.24], ["miku_frost", 0.22], ["miku_archer", 0.26], ["miku_cannon", 0.28]], null, 1.24),
-    S("M1-5", "라스트 라이브", "★★★★", 4800, 5500, 225, 23, 1.55, [["miku_speaker", 0.2], ["miku_note", 0.2], ["miku_frost", 0.2], ["miku_archer", 0.2], ["miku_cannon", 0.2]], null, 1.38),
+    S("M1-1", "첫 번째 사운드 체크", "★☆☆", 3600, 2400, 250, 13, 2.2, [["sprout", 0.48], ["spitter", 0.3], ["shell", 0.22]], null, 0.9),
+    S("M1-2", "대파 비트 러시", "★★☆", 3800, 3000, 240, 16, 2.0, [["sprout", 0.38], ["fang", 0.32], ["spitter", 0.3]], null, 1.0),
+    S("M1-3", "푸른 조명의 합주", "★★☆", 4100, 3700, 235, 18, 1.82, [["shell", 0.25], ["shaman", 0.28], ["fang", 0.25], ["sprout", 0.22]], null, 1.12),
+    S("M1-4", "네온 앙코르", "★★★", 4400, 4500, 230, 20, 1.68, [["fang", 0.24], ["shaman", 0.22], ["wraith", 0.26], ["jugger", 0.28]], null, 1.24),
+    S("M1-5", "라스트 라이브", "★★★★", 4800, 5500, 225, 23, 1.55, [["shell", 0.2], ["spitter", 0.2], ["shaman", 0.2], ["wraith", 0.2], ["jugger", 0.2]], null, 1.38),
   ];
 
   const SAVE_KEY = "fur-front-unlock";
@@ -951,23 +876,17 @@
       if (!riftGrantRevoked) {
         riftUnits = riftUnits.filter((id) => !FREE_RIFT_PREVIEW.has(id));
       }
-      const ownedAll = new Set([...units, ...riftUnits]);
+      const ownedCampaign = new Set(units);
+      const ownedRift = new Set(riftUnits);
+      const ownedAll = new Set([...ownedCampaign, ...ownedRift]);
       const requestedDeck = Array.isArray(saved.deck) ? migrateUnitIds(saved.deck) : units;
       const deck = [...new Set(requestedDeck)]
-        .filter((id) => ownedAll.has(id))
+        .filter((id) => ownedCampaign.has(id))
         .slice(0, MAX_DECK_SIZE);
-      const requestedRiftDeck = Array.isArray(saved.riftDeck) ? migrateUnitIds(saved.riftDeck) : units.slice(0, 5);
-      let riftDeck = [...new Set(requestedRiftDeck)]
-        .filter((id) => ownedAll.has(id))
+      const requestedRiftDeck = Array.isArray(saved.riftDeck) ? migrateUnitIds(saved.riftDeck) : riftUnits.slice(0, 5);
+      const riftDeck = [...new Set(requestedRiftDeck)]
+        .filter((id) => ownedRift.has(id))
         .slice(0, MAX_DECK_SIZE);
-      // 신월 덱에 본편 기본 대원이 하나도 없으면 자동으로 채워 넣음
-      const hasCampaignInRiftDeck = riftDeck.some((id) => CAMPAIGN_UNIT_IDS.has(id));
-      if (!hasCampaignInRiftDeck) {
-        for (const id of STARTER_UNITS) {
-          if (riftDeck.length >= MAX_DECK_SIZE) break;
-          if (ownedAll.has(id) && !riftDeck.includes(id)) riftDeck.push(id);
-        }
-      }
       const savedLevels = saved.levels && typeof saved.levels === "object" ? saved.levels : {};
       const allOwned = [...ownedAll];
       const levels = Object.fromEntries(allOwned.map((id) => [
@@ -982,7 +901,7 @@
         units,
         riftUnits,
         deck: deck.length ? deck : [units[0]],
-        riftDeck: riftDeck.length ? riftDeck : units.slice(0, Math.min(5, units.length)),
+        riftDeck,
         levels,
         duplicates: saved.duplicates && typeof saved.duplicates === "object" ? saved.duplicates : {},
         claimedStages: Array.isArray(saved.claimedStages) ? saved.claimedStages : [],
@@ -1059,7 +978,7 @@
   }
 
   function activeOwnedIds() {
-    return [...new Set([...state.profile.units, ...state.profile.riftUnits])];
+    return isRiftMode() ? state.profile.riftUnits.slice() : state.profile.units.slice();
   }
 
   function activeChestCount() {
@@ -1072,8 +991,7 @@
   }
 
   function modeUnits() {
-    // 본편/신월 모두: 보유한 본편+신월 대원 편성 가능
-    return UNIT_TYPES;
+    return UNIT_TYPES.filter((unit) => isRiftMode() ? unit.rift : !unit.rift);
   }
 
   function unlockablePool() {
@@ -1553,7 +1471,99 @@
     return Math.round(amount);
   }
 
+  function queueMikuProjectile(actor, target, baseHit, options) {
+    const color = options.color || "#48eadc";
+    burst(actor.x + actor.dir * actor.size * 0.32, actor.y - actor.size * 0.7, color, options.burst || 9, 70);
+    state.projectiles.push({
+      x: actor.x + actor.dir * actor.size * 0.38,
+      y: actor.y - actor.size * 0.7,
+      target: baseHit ? null : target,
+      baseTeam: baseHit ? (actor.team === "ally" ? "enemy" : "ally") : null,
+      targetX: baseHit ? (actor.team === "ally" ? ENEMY_BASE_X : PLAYER_BASE_X) : null,
+      targetY: baseHit ? GROUND - 82 : null,
+      team: actor.team,
+      dir: actor.dir,
+      speed: options.speed || 470,
+      damage: Math.round(options.damage),
+      splash: options.splash || 0,
+      slow: options.slow || 0,
+      chain: options.chain || 0,
+      chainRange: options.chainRange || 0,
+      knockback: options.knockback || 0,
+      poison: 0,
+      poisonDamage: 0,
+      siege: options.siege || 0,
+      color,
+      kind: options.kind || "miku_song",
+      dead: false,
+      age: 0,
+    });
+    sound("shoot");
+  }
+
+  function attackMikuBoss(actor, target, baseHit) {
+    const skills = ["song", "leek", "guard", "cannon"];
+    const skill = skills[(actor.mikuAttackIndex || 0) % skills.length];
+    actor.mikuAttackIndex = (actor.mikuAttackIndex || 0) + 1;
+    actor.mikuSkill = skill;
+    actor.attackTimer = attackDelay(actor);
+    actor.attackDuration = { song: 0.62, leek: 0.56, guard: 0.74, cannon: 0.92 }[skill];
+    actor.attackAnim = actor.attackDuration;
+    actor.moving = false;
+    const amount = rollAttackDamage(actor);
+
+    if (skill === "leek") {
+      if (!baseHit && target) {
+        const desiredX = target.x - actor.dir * actor.size * 0.72;
+        actor.x += clamp(desiredX - actor.x, -105 * VIEW_SCALE, 105 * VIEW_SCALE);
+      }
+      slashEffect(actor);
+      actor.pendingHit = {
+        timer: 0.14,
+        target,
+        baseHit,
+        damage: amount * 1.3,
+        cleave: 120 * VIEW_SCALE,
+      };
+      return;
+    }
+
+    if (skill === "guard") {
+      actor.mikuGuardTimer = Math.max(actor.mikuGuardTimer || 0, 3.2);
+      actor.attackTimer *= 1.22;
+      floating(actor.x, actor.y - actor.size * 1.05, "SPEAKER GUARD", "#62f2e5", 16);
+      spawnRing(actor.x, actor.y - actor.size * 0.5, "#ff55b8");
+      queueMikuProjectile(actor, target, baseHit, {
+        damage: amount * 0.72, color: "#ff55b8", speed: 410,
+        splash: 54 * VIEW_SCALE, slow: 1.1, kind: "miku_song",
+      });
+      return;
+    }
+
+    if (skill === "cannon") {
+      actor.attackTimer *= 1.72;
+      floating(actor.x, actor.y - actor.size * 1.08, "FINAL BEAT", "#ff69c5", 19);
+      state.shake = Math.max(state.shake, 0.35);
+      queueMikuProjectile(actor, target, baseHit, {
+        damage: amount * 2.05, color: "#ff4faf", speed: 360,
+        splash: 185 * VIEW_SCALE, knockback: 58 * VIEW_SCALE,
+        siege: 1.75, burst: 18, kind: "miku_cannon",
+      });
+      return;
+    }
+
+    queueMikuProjectile(actor, target, baseHit, {
+      damage: amount, color: "#48eadc", speed: 500,
+      slow: 0.7, chain: 3,
+      chainRange: 135 * VIEW_SCALE, kind: "miku_song",
+    });
+  }
+
   function attack(actor, target, baseHit) {
+    if (actor.id === "miku_diva") {
+      attackMikuBoss(actor, target, baseHit);
+      return;
+    }
     actor.attackTimer = attackDelay(actor);
     actor.attackAnim = actor.attackDuration;
     actor.moving = false;
@@ -1615,6 +1625,7 @@
       actor.age += dt;
       actor.attackTimer -= dt;
       actor.attackAnim = Math.max(0, actor.attackAnim - dt);
+      actor.mikuGuardTimer = Math.max(0, (actor.mikuGuardTimer || 0) - dt);
       actor.hitFlash = Math.max(0, actor.hitFlash - dt);
       actor.recoil = Math.max(0, actor.recoil - dt * 4.5);
       actor.slow = Math.max(0, actor.slow - dt);
@@ -1795,6 +1806,7 @@
 
   function damage(target, amount, x, y, heavy = false, dot = false) {
     if (!target || target.dead) return;
+    if (target.id === "miku_diva" && target.mikuGuardTimer > 0) amount *= 0.46;
     if (target.team === "ally") {
       const guarded = state.units.some((unit) => !unit.dead && unit.guard && Math.abs(unit.x - target.x) < 135);
       if (guarded) amount *= 0.72;
@@ -2233,7 +2245,7 @@
   }
 
   function unitSprite(type) {
-    const extraSprite = EXTRA_ALLY_SPRITES[type.id];
+    const extraSprite = type.rift ? RIFT_ALLY_SPRITES[type.id] : EXTRA_ALLY_SPRITES[type.id];
     if (extraSprite?.sheet) {
       return { sheet: extraSprite.sheet, crop: extraSprite.crop, unique: true };
     }
@@ -2264,7 +2276,8 @@
       const scale = Math.min((card.width - 16) / sourceW, (card.height - 4) / sourceH);
       const drawW = Math.round(sourceW * scale);
       const drawH = Math.round(sourceH * scale);
-      if (type.tint && !EXTRA_ALLY_SPRITES[type.id]?.sheet) {
+      const extraSprite = type.rift ? RIFT_ALLY_SPRITES[type.id] : EXTRA_ALLY_SPRITES[type.id];
+      if (type.tint && !extraSprite?.sheet) {
         cardCtx.filter = type.tint;
       }
       cardCtx.drawImage(
@@ -2339,8 +2352,8 @@
     if (ui.deckTitle) ui.deckTitle.textContent = isRiftMode() ? "신월 덱 편성" : "출격 덱 편성";
     if (ui.deckSubtitle) {
       ui.deckSubtitle.textContent = isRiftMode()
-        ? "본편 대원 + 신월 상자에서 얻은 대원을 함께 편성할 수 있습니다."
-        : "본편 대원과 신월에서 얻은 대원을 함께 편성할 수 있습니다.";
+        ? "신월 전선에서 얻은 대원만 편성할 수 있습니다."
+        : "본편에서 얻은 대원만 편성할 수 있습니다.";
     }
     if (ui.deckBtnLabel) ui.deckBtnLabel.textContent = isRiftMode() ? "신월 덱 편성" : "출격 덱 편성";
   }
@@ -3353,10 +3366,29 @@
     return true;
   }
 
+  function mikuBossFrame(actor) {
+    const idleFrame = Math.floor(actor.age * 2.4) % 2
+      ? MIKU_BOSS_FRAMES.idleB
+      : MIKU_BOSS_FRAMES.idleA;
+    if (actor.attackAnim > 0 && MIKU_BOSS_FRAMES[actor.mikuSkill]?.sheet) {
+      return MIKU_BOSS_FRAMES[actor.mikuSkill];
+    }
+    if (actor.mikuGuardTimer > 0 && MIKU_BOSS_FRAMES.guard.sheet) {
+      return MIKU_BOSS_FRAMES.guard;
+    }
+    return idleFrame.sheet ? idleFrame : MIKU_BOSS_FRAMES.idleA;
+  }
+
   function drawPixelFighter(actor) {
     const ally = actor.team === "ally";
-    const extraAllySprite = ally ? EXTRA_ALLY_SPRITES[actor.id] : null;
-    const extraEnemySprite = ally ? null : EXTRA_ENEMY_SPRITES[actor.id];
+    const extraAllySprite = ally
+      ? (actor.rift ? RIFT_ALLY_SPRITES[actor.id] : EXTRA_ALLY_SPRITES[actor.id])
+      : null;
+    const extraEnemySprite = ally
+      ? null
+      : (actor.id === "miku_diva"
+        ? mikuBossFrame(actor)
+        : (actor.rift ? RIFT_ENEMY_SPRITES[actor.id] : EXTRA_ENEMY_SPRITES[actor.id]));
     // Extra sprite registered but not loaded yet → fall through to atlas instead of skipping draw.
     const extraReady = (extraAllySprite && extraAllySprite.sheet) || (extraEnemySprite && extraEnemySprite.sheet);
     const extraSheet = extraReady ? (extraAllySprite?.sheet || extraEnemySprite?.sheet) : null;
@@ -3398,7 +3430,8 @@
     const jump = actor.dead ? 0 : Math.round(
       actor.moving ? Math.abs(walk) * 5 : (idle + 1) * 0.7
     );
-    const lunge = Math.round(attack * (actor.projectile ? -4 : 13) * actor.dir);
+    const rangedPose = actor.id === "miku_diva" ? actor.mikuSkill !== "leek" : actor.projectile;
+    const lunge = Math.round(attack * (rangedPose ? -4 : 13) * actor.dir);
     const recoilDir = actor.team === "ally" ? -1 : 1;
     const recoilOffset = Math.round(recoilDir * actor.recoil * 38);
     // Quantized spawn scaling keeps square sprite pixels from shimmering.
@@ -3461,7 +3494,17 @@
     for (const p of state.projectiles) {
       ctx.save();
       ctx.translate(Math.round(p.x), Math.round(p.y));
-      if (p.kind === "mage") {
+      if (p.kind === "miku_song") {
+        const pulse = Math.floor(p.age * 12) % 2 ? 2 : 0;
+        pixelRect(-3, -14 - pulse, 7, 23, "#72fff0", "#173f4d", 2);
+        pixelRect(2, -15 - pulse, 13, 5, "#ff63bd", "#173f4d", 2);
+        pixelRect(-10, 5, 12, 12, "#48eadc", "#173f4d", 3);
+      } else if (p.kind === "miku_cannon") {
+        const glow = Math.floor(p.age * 16) % 2 ? "#fff0fc" : "#74fff2";
+        pixelRect(-18, -10, 35, 21, "#ff4faf", "#25233c", 4);
+        pixelRect(-10, -17, 20, 35, "#48eadc", "#25233c", 3);
+        pixelRect(-5, -6, 11, 13, glow);
+      } else if (p.kind === "mage") {
         const pulse = Math.floor(p.age * 10) % 2 ? 3 : 0;
         pixelRect(-5, -17 - pulse, 10, 34 + pulse * 2, "#fff4a0", "#a76331", 3);
         pixelRect(-17 - pulse, -5, 34 + pulse * 2, 10, "#ffe04d", "#a76331", 3);
