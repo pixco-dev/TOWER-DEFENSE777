@@ -238,25 +238,66 @@
   // Sprite images can finish loading before `state` is initialized. UI refreshes
   // must wait until the runtime is ready or the entire menu bootstrap aborts.
   let spriteUiReady = false;
-  const bindExtraSprite = (sprite, refreshUi) => {
-    sprite.image.addEventListener("load", () => {
-      // PNGs are pre-keyed. Never strip interiors or dark fur/armor at runtime.
-      sprite.sheet = sprite.image;
-      if (!sprite.crop || sprite.crop[2] <= sprite.crop[0]) {
-        sprite.crop = [0, 0, sprite.image.naturalWidth || 320, sprite.image.naturalHeight || 360];
+
+  function prepareCandidateSprite(sprite) {
+    const image = sprite.image;
+    if (!image?.naturalWidth || !image?.naturalHeight) return;
+    try {
+      const sheet = stripSpriteBackdrop(image);
+      const probe = document.createElement("canvas");
+      probe.width = sheet.width || image.naturalWidth;
+      probe.height = sheet.height || image.naturalHeight;
+      const probeCtx = probe.getContext("2d", { willReadFrequently: true });
+      probeCtx.drawImage(sheet, 0, 0);
+      const rgba = probeCtx.getImageData(0, 0, probe.width, probe.height).data;
+      let minX = probe.width;
+      let minY = probe.height;
+      let maxX = -1;
+      let maxY = -1;
+      for (let y = 0; y < probe.height; y++) {
+        for (let x = 0; x < probe.width; x++) {
+          const alpha = rgba[(y * probe.width + x) * 4 + 3];
+          if (alpha < 18) continue;
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
       }
+      if (maxX >= minX && maxY >= minY) {
+        const padX = Math.max(6, Math.round((maxX - minX + 1) * 0.035));
+        const padY = Math.max(6, Math.round((maxY - minY + 1) * 0.035));
+        sprite.crop = [
+          Math.max(0, minX - padX),
+          Math.max(0, minY - padY),
+          Math.min(probe.width, maxX + 1 + padX),
+          Math.min(probe.height, maxY + 1 + padY),
+        ];
+      } else {
+        sprite.crop = [0, 0, image.naturalWidth, image.naturalHeight];
+      }
+      sprite.sheet = sheet;
+      // Auto-crop already describes the visible silhouette, so old per-file
+      // vertical compensation would double-offset the character.
+      sprite.verticalBounds = [0, 1];
+    } catch (error) {
+      sprite.sheet = image;
+      sprite.crop = [0, 0, image.naturalWidth, image.naturalHeight];
+      sprite.verticalBounds = [0, 1];
+    }
+  }
+
+  const bindExtraSprite = (sprite, refreshUi) => {
+    const apply = () => {
+      prepareCandidateSprite(sprite);
       if (refreshUi && spriteUiReady) {
         renderCardPortraits();
         renderDeckBuilder();
       }
-    });
+    };
+    sprite.image.addEventListener("load", apply);
     sprite.image.src = sprite.src;
-    if (sprite.image.complete && sprite.image.naturalWidth) {
-      sprite.sheet = sprite.image;
-      if (!sprite.crop || sprite.crop[2] <= sprite.crop[0]) {
-        sprite.crop = [0, 0, sprite.image.naturalWidth, sprite.image.naturalHeight];
-      }
-    }
+    if (sprite.image.complete && sprite.image.naturalWidth) apply();
   };
   for (const sprite of Object.values(EXTRA_ALLY_SPRITES)) bindExtraSprite(sprite, true);
   for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) bindExtraSprite(sprite, false);
@@ -292,8 +333,7 @@
       const entry = candidateSprite(`${prefix}-${fileId}`, { fitScale });
       into[id] = entry;
       const apply = () => {
-        entry.sheet = entry.image;
-        entry.crop = [0, 0, entry.image.naturalWidth, entry.image.naturalHeight];
+        prepareCandidateSprite(entry);
         if (refreshUi && spriteUiReady) {
           if (typeof renderCardPortraits === "function") renderCardPortraits();
           if (typeof renderDeckBuilder === "function") renderDeckBuilder();
@@ -409,9 +449,10 @@
         const b = pixels[p + 2];
         const min = Math.min(r, g, b);
         const max = Math.max(r, g, b);
-        const magenta = r >= 180 && b >= 180 && g <= 90 && r - g >= 80 && b - g >= 80;
-        const nearWhite = min >= 232 && max - min < 14;
-        return magenta || nearWhite;
+        const magenta = r >= 170 && b >= 170 && g <= 105 && r - g >= 65 && b - g >= 65;
+        const neutral = max - min < 24;
+        const keyedNeutral = neutral && (min >= 164 || max <= 30);
+        return magenta || keyedNeutral;
       };
       const enqueue = (index) => {
         if (index < 0 || index >= total || visited[index] || !isBackdrop(index)) return;
@@ -3374,6 +3415,46 @@
     return idleFrame.sheet ? idleFrame : MIKU_BOSS_FRAMES.idleA;
   }
 
+  function fighterMotion(actor) {
+    const kind = actor.kind;
+    const id = actor.id;
+    const fly = kind === "bat" || kind === "raven" || kind === "frost" || kind === "knockback"
+      || id === "gale_hawk" || id === "frost_owl" || id === "bloodwing_bat" || id === "bone_raven";
+    const heavy = Boolean(actor.raid)
+      || ["titan", "brute", "jugger", "rhino", "shield", "shell", "boss", "king", "nightlord"].includes(kind);
+    const hoppy = ["scout", "moco", "assassin", "berserker", "swarm", "wolf", "wraith"].includes(kind);
+    const drummer = kind === "drummer";
+    const ranger = actor.id === "miku_diva" ? actor.mikuSkill !== "leek" : Boolean(actor.projectile);
+    const t = actor.age + actor.seed;
+    const spd = Math.max(16, actor.speed || 40);
+    const freq = fly ? 7.4 : hoppy ? 14.2 : heavy ? 5.1 : drummer ? 8.4 : 9.6;
+    const walk = actor.moving && !actor.dead ? Math.sin(t * freq * (spd / 48)) : 0;
+    const idle = Math.sin(t * (fly ? 3.6 : drummer ? 6.2 : 2.7));
+    const attackProgress = actor.attackAnim > 0 ? 1 - actor.attackAnim / actor.attackDuration : 0;
+    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
+    const hop = actor.dead
+      ? 0
+      : (fly
+        ? 11 + idle * 5.5 + Math.abs(walk) * 3
+        : actor.moving
+          ? Math.abs(walk) * (hoppy ? 9 : heavy ? 3.5 : drummer ? 6.5 : 5.5)
+          : (idle + 1) * (drummer ? 1.4 : 0.75));
+    const squashX = (actor.moving
+      ? 1 + Math.abs(walk) * (heavy ? 0.045 : 0.03) - (walk > 0.55 ? 0.05 : 0)
+      : 1 + idle * 0.012) * (1 + attack * (ranger ? 0.03 : 0.08));
+    const squashY = (actor.moving
+      ? 1 - Math.abs(walk) * (heavy ? 0.04 : fly ? 0.06 : 0.025) + (walk > 0.55 ? 0.05 : 0)
+      : fly ? 1 + Math.sin(t * 8.5) * 0.035 : 1 - idle * 0.01) * (1 + attack * (ranger ? -0.06 : -0.05));
+    const tilt = fly
+      ? walk * 0.05 + idle * 0.01
+      : actor.moving
+        ? walk * (heavy ? 0.012 : hoppy ? 0.038 : 0.024)
+        : idle * 0.006;
+    const lunge = attack * (ranger ? -9 : heavy ? 18 : hoppy ? 16 : 13) * actor.dir;
+    const trail = fly || hoppy ? Math.abs(walk) > 0.32 : Math.abs(walk) > 0.68;
+    return { walk, idle, attackProgress, attack, hop, squashX, squashY, tilt, lunge, trail, fly };
+  }
+
   function drawPixelFighter(actor) {
     const ally = actor.team === "ally";
     const extraAllySprite = ally
@@ -3412,21 +3493,13 @@
     const sourceY = crop[1];
     const sourceW = crop[2] - crop[0];
     const sourceH = crop[3] - crop[1];
-    const walk = actor.moving ? Math.sin(actor.age * actor.speed * 0.2 + actor.seed) : 0;
-    const idle = Math.sin(actor.age * 2.8 + actor.seed);
-    const attackProgress = actor.attackAnim > 0
-      ? 1 - actor.attackAnim / actor.attackDuration
-      : 0;
-    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
+    const motion = fighterMotion(actor);
     const deathT = clamp(actor.death / 0.7, 0, 1);
     const drawScale = (extraAllySprite?.fitScale || extraEnemySprite?.fitScale || 1);
     const drawH = Math.round(actor.size * (ally ? 3.45 : 3.35) * drawScale);
     const drawW = Math.round(drawH * sourceW / sourceH);
-    const jump = actor.dead ? 0 : Math.round(
-      actor.moving ? Math.abs(walk) * 5 : (idle + 1) * 0.7
-    );
-    const rangedPose = actor.id === "miku_diva" ? actor.mikuSkill !== "leek" : actor.projectile;
-    const lunge = Math.round(attack * (rangedPose ? -4 : 13) * actor.dir);
+    const jump = Math.round(motion.hop);
+    const lunge = Math.round(motion.lunge);
     const recoilDir = actor.team === "ally" ? -1 : 1;
     const recoilOffset = Math.round(recoilDir * actor.recoil * 38);
     // Quantized spawn scaling keeps square sprite pixels from shimmering.
@@ -3441,7 +3514,8 @@
 
     ctx.save();
     ctx.translate(Math.round(actor.x + lunge + recoilOffset), Math.round(actor.y - jump));
-    ctx.scale(spawnScale, spawnScale);
+    ctx.scale(spawnScale * motion.squashX, spawnScale * motion.squashY);
+    ctx.rotate(motion.tilt);
     if (flipSpriteX) ctx.scale(-1, 1);
     ctx.globalAlpha = actor.dead ? 1 - deathT : 1;
     if (actor.dead) {
@@ -3450,6 +3524,18 @@
     }
 
     pixelRect(-drawW * 0.38, 2 + jump, drawW * 0.76, 8, "rgba(21,30,24,.28)");
+    if (actor.moving && motion.trail) {
+      ctx.save();
+      ctx.globalAlpha = motion.fly ? 0.18 : 0.12;
+      ctx.drawImage(
+        sheet,
+        sourceX, sourceY, sourceW, sourceH,
+        Math.round(-drawW / 2 - 7 * actor.dir),
+        Math.round(-drawH + groundOffset + (motion.fly ? 5 : 0)),
+        drawW, drawH
+      );
+      ctx.restore();
+    }
     if (actor.hitFlash > 0) {
       ctx.filter = "brightness(2.4) saturate(.2)";
     } else if (actor.tint && (!extraSheet || extraAllySprite?.allowTint || extraEnemySprite?.allowTint)) {
@@ -3464,7 +3550,7 @@
     ctx.filter = "none";
 
     if (actor.attackAnim > 0 && actor.projectile) {
-      const charge = Math.sin(attackProgress * Math.PI);
+      const charge = Math.sin(motion.attackProgress * Math.PI);
       const front = drawW * 0.47;
       pixelRect(front - 4, -drawH * 0.63 - 4, 8, 8, actor.shot || (actor.kind === "mage" ? "#ffe26a" : "#a8ec73"));
       if (charge > 0.45) {
