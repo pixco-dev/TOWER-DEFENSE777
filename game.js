@@ -243,7 +243,7 @@
     const image = sprite.image;
     if (!image?.naturalWidth || !image?.naturalHeight) return;
     try {
-      const sheet = stripSpriteBackdrop(image);
+      const sheet = image;
       const probe = document.createElement("canvas");
       probe.width = sheet.width || image.naturalWidth;
       probe.height = sheet.height || image.naturalHeight;
@@ -451,7 +451,7 @@
         const max = Math.max(r, g, b);
         const magenta = r >= 170 && b >= 170 && g <= 105 && r - g >= 65 && b - g >= 65;
         const neutral = max - min < 24;
-        const keyedNeutral = neutral && (min >= 164 || max <= 30);
+        const keyedNeutral = neutral && min >= 205;
         return magenta || keyedNeutral;
       };
       const enqueue = (index) => {
