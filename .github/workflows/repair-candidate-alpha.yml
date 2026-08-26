@@ -1,0 +1,28 @@
+name: Repair candidate sprite alpha
+on:
+  push:
+    paths:
+      - "tools/repair_candidate_alpha.py"
+      - ".github/workflows/repair-candidate-alpha.yml"
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pillow
+      - name: Repair candidate sprites
+        run: python tools/repair_candidate_alpha.py
+      - name: Commit repaired sprites and runtime guard
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/candidates/unified-v1 game.js sw.js tools/candidate-alpha-report.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Repair sprite backgrounds and preserve dark outlines"
+          git push
