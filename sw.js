@@ -1,4 +1,4 @@
-const CACHE_NAME = "fur-frontline-offline-v59";
+const CACHE_NAME = "fur-frontline-offline-v60";
 const CANDIDATE_SPRITES = [
   "./assets/candidates/unified-v1/ally-armored-armadillo.png",
   "./assets/candidates/unified-v1/ally-boksuli.png",

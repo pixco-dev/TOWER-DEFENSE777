@@ -11,10 +11,22 @@
   let BATTLE_START = 178;
   let BATTLE_END = 1102;
   let VIEW_SCALE = 1;
+  let FIGHTER_VIEW_SCALE = 1;
   let outputScale = 1;
   const FIGHTER_SCALE = 0.72;
 
   function layoutBattle() {
+    const previousLayout = {
+      width: W,
+      height: H,
+      ground: GROUND,
+      playerBaseX: PLAYER_BASE_X,
+      enemyBaseX: ENEMY_BASE_X,
+      battleStart: BATTLE_START,
+      battleEnd: BATTLE_END,
+      viewScale: VIEW_SCALE,
+      fighterViewScale: FIGHTER_VIEW_SCALE,
+    };
     const wrap = canvas.parentElement;
     let cssW = Math.round(wrap.clientWidth || window.innerWidth);
     let cssH = Math.round(wrap.clientHeight || window.innerHeight);
@@ -36,11 +48,17 @@
     W = cssW;
     H = cssH;
     VIEW_SCALE = Math.min(W / 1280, H / 720);
+    // Use the short viewport edge for sprite scale. Rotating a phone/tablet
+    // swaps width and height, but no longer makes every fighter grow/shrink.
+    FIGHTER_VIEW_SCALE = Math.max(0.5, Math.min(1.25, Math.min(W, H) / 720));
     GROUND = Math.round(H - 128);
     PLAYER_BASE_X = Math.round(Math.max(110, 120 * VIEW_SCALE));
     ENEMY_BASE_X = W - PLAYER_BASE_X;
     BATTLE_START = PLAYER_BASE_X + Math.round(80 * VIEW_SCALE);
     BATTLE_END = ENEMY_BASE_X - Math.round(80 * VIEW_SCALE);
+    if (previousLayout.width !== W || previousLayout.height !== H) {
+      rescaleBattleEntities(previousLayout);
+    }
   }
 
   const ui = {
@@ -1263,6 +1281,41 @@
     return Math.round(130 * Math.pow(1.43, state.worker));
   }
 
+  function rescaleBattleEntities(previous) {
+    if (!state?.units || !state?.enemies) return;
+    const oldSpan = Math.max(1, previous.enemyBaseX - previous.playerBaseX);
+    const newSpan = Math.max(1, ENEMY_BASE_X - PLAYER_BASE_X);
+    const oldBattleSpan = Math.max(1, previous.battleEnd - previous.battleStart);
+    const newBattleSpan = Math.max(1, BATTLE_END - BATTLE_START);
+    const worldRatio = VIEW_SCALE / Math.max(0.001, previous.viewScale);
+    const fighterRatio = FIGHTER_VIEW_SCALE / Math.max(0.001, previous.fighterViewScale);
+    const mapX = (x) => PLAYER_BASE_X + ((x - previous.playerBaseX) / oldSpan) * newSpan;
+    const mapBattleX = (x) => BATTLE_START + ((x - previous.battleStart) / oldBattleSpan) * newBattleSpan;
+
+    for (const actor of [...state.units, ...state.enemies]) {
+      actor.x = mapBattleX(actor.x);
+      actor.y = GROUND + actor.lane * Math.round(10 * VIEW_SCALE);
+      actor.size = Math.max(1, Math.round(actor.size * fighterRatio));
+      actor.range *= worldRatio;
+      actor.speed *= worldRatio;
+      actor.cleave *= worldRatio;
+      actor.splash *= worldRatio;
+    }
+
+    for (const projectile of state.projectiles || []) {
+      projectile.x = mapX(projectile.x);
+      projectile.y = GROUND + (projectile.y - previous.ground) * fighterRatio;
+      if (Number.isFinite(projectile.targetX)) projectile.targetX = mapX(projectile.targetX);
+      if (Number.isFinite(projectile.targetY)) {
+        projectile.targetY = GROUND + (projectile.targetY - previous.ground) * fighterRatio;
+      }
+      projectile.speed *= worldRatio;
+      projectile.splash *= worldRatio;
+      projectile.chainRange *= worldRatio;
+      projectile.knockback *= worldRatio;
+    }
+  }
+
   function incomeRate() {
     return 18 + state.worker * 7;
   }
@@ -1293,7 +1346,7 @@
       heal: type.heal ? Math.round(type.heal * supportPower) : type.heal,
       aura: type.aura ? type.aura + (level - 1) * 0.04 : type.aura,
       recharge: summonRecharge(type),
-      size: Math.round(type.size * VIEW_SCALE * FIGHTER_SCALE),
+      size: Math.round(type.size * FIGHTER_VIEW_SCALE * FIGHTER_SCALE),
       range: type.range * VIEW_SCALE,
       speed: type.speed * VIEW_SCALE,
       cleave: (type.cleave || 0) * VIEW_SCALE,
@@ -3448,6 +3501,45 @@
     return MIKU_ENEMY_FRAMES[actor.mikuSkill] || MIKU_ENEMY_FRAMES.song;
   }
 
+  function fighterMotion(actor) {
+    const kind = actor.kind;
+    const id = actor.id;
+    const fly = kind === "bat" || kind === "raven" || kind === "frost" || kind === "knockback"
+      || id === "gale_hawk" || id === "frost_owl" || id === "bloodwing_bat" || id === "bone_raven";
+    const heavy = Boolean(actor.raid)
+      || ["titan", "brute", "jugger", "rhino", "shield", "shell", "boss", "king", "nightlord"].includes(kind);
+    const hoppy = ["scout", "moco", "assassin", "berserker", "swarm", "wolf", "wraith"].includes(kind);
+    const drummer = kind === "drummer";
+    const ranger = actor.mikuSkill ? actor.mikuSkill !== "leek" : Boolean(actor.projectile);
+    const t = actor.age + actor.seed;
+    const speedRatio = Math.max(0.55, Math.min(1.7, (actor.speed || 40) / Math.max(1, 40 * VIEW_SCALE)));
+    const frequency = (fly ? 7.4 : hoppy ? 14.2 : heavy ? 5.1 : drummer ? 8.4 : 9.6) * speedRatio;
+    const walk = actor.moving && !actor.dead ? Math.sin(t * frequency) : 0;
+    const idle = Math.sin(t * (fly ? 3.6 : drummer ? 6.2 : 2.7));
+    const attackProgress = actor.attackAnim > 0 ? 1 - actor.attackAnim / actor.attackDuration : 0;
+    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
+    const hop = actor.dead
+      ? 0
+      : (fly
+        ? 11 + idle * 5.5 + Math.abs(walk) * 3
+        : actor.moving
+          ? Math.abs(walk) * (hoppy ? 9 : heavy ? 3.5 : drummer ? 6.5 : 5.5)
+          : (idle + 1) * (drummer ? 1.4 : 0.75));
+    const squashX = (actor.moving
+      ? 1 + Math.abs(walk) * (heavy ? 0.045 : 0.03) - (walk > 0.55 ? 0.05 : 0)
+      : 1 + idle * 0.012) * (1 + attack * (ranger ? 0.03 : 0.08));
+    const squashY = (actor.moving
+      ? 1 - Math.abs(walk) * (heavy ? 0.04 : fly ? 0.06 : 0.025) + (walk > 0.55 ? 0.05 : 0)
+      : fly ? 1 + Math.sin(t * 8.5) * 0.035 : 1 - idle * 0.01) * (1 + attack * (ranger ? -0.06 : -0.05));
+    const tilt = fly
+      ? walk * 0.05 + idle * 0.01
+      : actor.moving
+        ? walk * (heavy ? 0.012 : hoppy ? 0.038 : 0.024)
+        : idle * 0.006;
+    const lunge = attack * (ranger ? -9 : heavy ? 18 : hoppy ? 16 : 13) * actor.dir;
+    return { attackProgress, hop, squashX, squashY, tilt, lunge };
+  }
+
   function drawPixelFighter(actor) {
     const ally = actor.team === "ally";
     const extraAllySprite = ally
@@ -3486,21 +3578,13 @@
     const sourceY = crop[1];
     const sourceW = crop[2] - crop[0];
     const sourceH = crop[3] - crop[1];
-    const walk = actor.moving ? Math.sin(actor.age * actor.speed * 0.2 + actor.seed) : 0;
-    const idle = Math.sin(actor.age * 2.8 + actor.seed);
-    const attackProgress = actor.attackAnim > 0
-      ? 1 - actor.attackAnim / actor.attackDuration
-      : 0;
-    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
+    const motion = fighterMotion(actor);
     const deathT = clamp(actor.death / 0.7, 0, 1);
     const drawScale = (extraAllySprite?.fitScale || extraEnemySprite?.fitScale || 1);
     const drawH = Math.round(actor.size * (ally ? 3.45 : 3.35) * drawScale);
     const drawW = Math.round(drawH * sourceW / sourceH);
-    const jump = actor.dead ? 0 : Math.round(
-      actor.moving ? Math.abs(walk) * 5 : (idle + 1) * 0.7
-    );
-    const rangedPose = actor.mikuSkill ? actor.mikuSkill !== "leek" : actor.projectile;
-    const lunge = Math.round(attack * (rangedPose ? -4 : 13) * actor.dir);
+    const jump = Math.round(motion.hop);
+    const lunge = Math.round(motion.lunge);
     const recoilDir = actor.team === "ally" ? -1 : 1;
     const recoilOffset = Math.round(recoilDir * actor.recoil * 38);
     // Quantized spawn scaling keeps square sprite pixels from shimmering.
@@ -3515,7 +3599,8 @@
 
     ctx.save();
     ctx.translate(Math.round(actor.x + lunge + recoilOffset), Math.round(actor.y - jump));
-    ctx.scale(spawnScale, spawnScale);
+    ctx.scale(spawnScale * motion.squashX, spawnScale * motion.squashY);
+    ctx.rotate(motion.tilt);
     if (flipSpriteX) ctx.scale(-1, 1);
     ctx.globalAlpha = actor.dead ? 1 - deathT : 1;
     if (actor.dead) {
@@ -3538,7 +3623,7 @@
     ctx.filter = "none";
 
     if (actor.attackAnim > 0 && actor.projectile) {
-      const charge = Math.sin(attackProgress * Math.PI);
+      const charge = Math.sin(motion.attackProgress * Math.PI);
       const front = drawW * 0.47;
       pixelRect(front - 4, -drawH * 0.63 - 4, 8, 8, actor.shot || (actor.kind === "mage" ? "#ffe26a" : "#a8ec73"));
       if (charge > 0.45) {
