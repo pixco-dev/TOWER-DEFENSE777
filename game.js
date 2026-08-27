@@ -3512,8 +3512,8 @@
     const drummer = kind === "drummer";
     const ranger = actor.mikuSkill ? actor.mikuSkill !== "leek" : Boolean(actor.projectile);
     const t = actor.age + actor.seed;
-    const speedRatio = Math.max(0.55, Math.min(1.7, (actor.speed || 40) / Math.max(1, 40 * VIEW_SCALE)));
-    const frequency = (fly ? 7.4 : hoppy ? 14.2 : heavy ? 5.1 : drummer ? 8.4 : 9.6) * speedRatio;
+    const speedRatio = Math.max(0.72, Math.min(1.3, (actor.speed || 40) / Math.max(1, 40 * VIEW_SCALE)));
+    const frequency = (fly ? 5.8 : hoppy ? 9.5 : heavy ? 4.2 : drummer ? 6 : 6.5) * speedRatio;
     const walk = actor.moving && !actor.dead ? Math.sin(t * frequency) : 0;
     const idle = Math.sin(t * (fly ? 3.6 : drummer ? 6.2 : 2.7));
     const attackProgress = actor.attackAnim > 0 ? 1 - actor.attackAnim / actor.attackDuration : 0;
@@ -3521,22 +3521,22 @@
     const hop = actor.dead
       ? 0
       : (fly
-        ? 11 + idle * 5.5 + Math.abs(walk) * 3
+        ? 7 + idle * 2.5 + Math.abs(walk) * 1.5
         : actor.moving
-          ? Math.abs(walk) * (hoppy ? 9 : heavy ? 3.5 : drummer ? 6.5 : 5.5)
-          : (idle + 1) * (drummer ? 1.4 : 0.75));
+          ? Math.abs(walk) * (hoppy ? 4 : heavy ? 1.8 : drummer ? 3 : 2.5)
+          : (idle + 1) * (drummer ? 0.7 : 0.35));
     const squashX = (actor.moving
-      ? 1 + Math.abs(walk) * (heavy ? 0.045 : 0.03) - (walk > 0.55 ? 0.05 : 0)
-      : 1 + idle * 0.012) * (1 + attack * (ranger ? 0.03 : 0.08));
+      ? 1 + Math.abs(walk) * (heavy ? 0.012 : 0.009) - (walk > 0.65 ? 0.012 : 0)
+      : 1 + idle * 0.004) * (1 + attack * (ranger ? 0.008 : 0.022));
     const squashY = (actor.moving
-      ? 1 - Math.abs(walk) * (heavy ? 0.04 : fly ? 0.06 : 0.025) + (walk > 0.55 ? 0.05 : 0)
-      : fly ? 1 + Math.sin(t * 8.5) * 0.035 : 1 - idle * 0.01) * (1 + attack * (ranger ? -0.06 : -0.05));
+      ? 1 - Math.abs(walk) * (heavy ? 0.01 : fly ? 0.018 : 0.008) + (walk > 0.65 ? 0.012 : 0)
+      : fly ? 1 + Math.sin(t * 6.5) * 0.014 : 1 - idle * 0.003) * (1 + attack * (ranger ? -0.018 : -0.02));
     const tilt = fly
-      ? walk * 0.05 + idle * 0.01
+      ? walk * 0.018 + idle * 0.004
       : actor.moving
-        ? walk * (heavy ? 0.012 : hoppy ? 0.038 : 0.024)
-        : idle * 0.006;
-    const lunge = attack * (ranger ? -9 : heavy ? 18 : hoppy ? 16 : 13) * actor.dir;
+        ? walk * (heavy ? 0.004 : hoppy ? 0.012 : 0.008)
+        : idle * 0.002;
+    const lunge = attack * (ranger ? -4 : heavy ? 9 : hoppy ? 8 : 7) * actor.dir;
     return { attackProgress, hop, squashX, squashY, tilt, lunge };
   }
 
