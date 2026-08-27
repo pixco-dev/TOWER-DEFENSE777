@@ -1,4 +1,4 @@
-const CACHE_NAME = "fur-frontline-offline-v57";
+const CACHE_NAME = "fur-frontline-offline-v59";
 const CANDIDATE_SPRITES = [
   "./assets/candidates/unified-v1/ally-armored-armadillo.png",
   "./assets/candidates/unified-v1/ally-boksuli.png",
@@ -97,7 +97,7 @@ const CANDIDATE_SPRITES = [
   "./assets/candidates/unified-v1/miku-cannon.png",
 ];
 const APP_SHELL = [
-  "./", "./index.html", "./styles.css", "./game.js", "./rift-roster.js", "./firebase-config.js",
+  "./", "./index.html", "./styles.css", "./game.js", "./sprite-pixels.js", "./rift-roster.js", "./firebase-config.js",
   "./firebase-save.js", "./pwa.js", "./manifest.webmanifest", "./assets/app-icon.svg",
   "./assets/pixel-title-night.png", "./assets/pixel-battlefield-night.png",
   "./assets/pixel-stage-ch2-pine-v1.png", "./assets/pixel-stage-ch3-swamp-v1.png",
@@ -120,7 +120,6 @@ const APP_SHELL = [
   "./assets/_new-allies-1.png", "./assets/_new-allies-2.png", "./assets/_new-allies-3.png",
   "./assets/_new-enemies-1.png", "./assets/_new-enemies-2.png", "./assets/_new-enemies-3.png",
   "./assets/pixel-miku-towers-v2.png",
-  ...CANDIDATE_SPRITES,
 ];
 
 self.addEventListener("install", (event) => {

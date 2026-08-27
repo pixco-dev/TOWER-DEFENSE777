@@ -157,12 +157,25 @@
   rockShieldSheet.src = "assets/pixel-ally-rockshield-v2.png";
   enemySheet.src = "assets/pixel-enemies-keyed.png?v=3";
 
-  const candidateSprite = (file, options = {}) => ({
-    image: new Image(),
-    src: `assets/candidates/unified-v1/${file}.png?v=2`,
-    crop: null,
-    ...options,
-  });
+  const candidateSprite = (file, options = {}) => {
+    const pixelCanvas = window.FurPixelSprites?.canvas?.(file);
+    if (pixelCanvas) {
+      return {
+        image: pixelCanvas,
+        sheet: pixelCanvas,
+        src: "",
+        crop: [0, 0, pixelCanvas.width, pixelCanvas.height],
+        pixelData: true,
+        ...options,
+      };
+    }
+    return {
+      image: new Image(),
+      src: `assets/candidates/unified-v1/${file}.png?v=2`,
+      crop: null,
+      ...options,
+    };
+  };
 
   // 본편과 신월 전선은 별도 표를 사용한다. 같은 ID가 있어도 서로 덮어쓰지 않는다.
   const EXTRA_ALLY_SPRITES = {
@@ -189,6 +202,7 @@
     lightning_otter: candidateSprite("ally-lightning-otter"),
     gale_hawk: candidateSprite("ally-gale-hawk"),
     herb_hedgehog: candidateSprite("ally-herb-hedgehog"),
+    miku: candidateSprite("miku-diva", { fitScale: 1.08 }),
   };
 
   const EXTRA_ENEMY_SPRITES = {
@@ -222,88 +236,55 @@
     thorn_king: candidateSprite("enemy-thorn-prince"),
     dusk_lord: candidateSprite("enemy-nightlord"),
   };
-  // 미쿠는 여러 유닛이 아니라 하나의 보스다. 아래 이미지는 모두 같은
-  // 보스의 행동 프레임이며 별도 적으로 등록하지 않는다.
-  const MIKU_BOSS_FRAMES = {
+  // 각 미쿠는 하나의 공격만 담당한다. 같은 캐릭터가 모든 기술을
+  // 순환하지 않도록 전투 타입과 스프라이트를 공격별로 분리한다.
+  const MIKU_ENEMY_FRAMES = {
     idleA: candidateSprite("miku-diva", { fitScale: 1.12, flipX: true }),
     idleB: candidateSprite("miku-idle-b", { fitScale: 1.12, flipX: true }),
-    song: candidateSprite("miku-note", { fitScale: 1.08, flipX: true }),
-    leek: candidateSprite("miku-leek", { fitScale: 1.06, flipX: true }),
-    guard: candidateSprite("miku-speaker", { fitScale: 1.05, flipX: true }),
-    cannon: candidateSprite("miku-cannon", { fitScale: 0.98 }),
+    // The action frames have very different transparent margins. Normalize their
+    // visible pixel height so Miku herself does not grow/shrink between attacks.
+    song: candidateSprite("miku-note", { fitScale: 1.12, flipX: true }),
+    leek: candidateSprite("miku-leek", { fitScale: 1.14, flipX: true }),
+    guard: candidateSprite("miku-speaker", { fitScale: 0.84, flipX: true }),
+    cannon: candidateSprite("miku-cannon", { fitScale: 1.02 }),
   };
-  EXTRA_ENEMY_SPRITES.miku_diva = MIKU_BOSS_FRAMES.idleA;
+  const MIKU_ALLY_ATTACK_FRAME = candidateSprite("miku-note", { fitScale: 1.33 });
+  EXTRA_ENEMY_SPRITES.miku_song = MIKU_ENEMY_FRAMES.song;
+  EXTRA_ENEMY_SPRITES.miku_leek = MIKU_ENEMY_FRAMES.leek;
+  EXTRA_ENEMY_SPRITES.miku_guard = MIKU_ENEMY_FRAMES.guard;
+  EXTRA_ENEMY_SPRITES.miku_cannon = MIKU_ENEMY_FRAMES.cannon;
   const RIFT_ALLY_SPRITES = {};
   const RIFT_ENEMY_SPRITES = {};
   // Sprite images can finish loading before `state` is initialized. UI refreshes
   // must wait until the runtime is ready or the entire menu bootstrap aborts.
   let spriteUiReady = false;
-
-  function prepareCandidateSprite(sprite) {
-    const image = sprite.image;
-    if (!image?.naturalWidth || !image?.naturalHeight) return;
-    try {
-      const sheet = image;
-      const probe = document.createElement("canvas");
-      probe.width = sheet.width || image.naturalWidth;
-      probe.height = sheet.height || image.naturalHeight;
-      const probeCtx = probe.getContext("2d", { willReadFrequently: true });
-      probeCtx.drawImage(sheet, 0, 0);
-      const rgba = probeCtx.getImageData(0, 0, probe.width, probe.height).data;
-      let minX = probe.width;
-      let minY = probe.height;
-      let maxX = -1;
-      let maxY = -1;
-      for (let y = 0; y < probe.height; y++) {
-        for (let x = 0; x < probe.width; x++) {
-          const alpha = rgba[(y * probe.width + x) * 4 + 3];
-          if (alpha < 18) continue;
-          if (x < minX) minX = x;
-          if (y < minY) minY = y;
-          if (x > maxX) maxX = x;
-          if (y > maxY) maxY = y;
-        }
-      }
-      if (maxX >= minX && maxY >= minY) {
-        const padX = Math.max(6, Math.round((maxX - minX + 1) * 0.035));
-        const padY = Math.max(6, Math.round((maxY - minY + 1) * 0.035));
-        sprite.crop = [
-          Math.max(0, minX - padX),
-          Math.max(0, minY - padY),
-          Math.min(probe.width, maxX + 1 + padX),
-          Math.min(probe.height, maxY + 1 + padY),
-        ];
-      } else {
-        sprite.crop = [0, 0, image.naturalWidth, image.naturalHeight];
-      }
-      sprite.sheet = sheet;
-      // Auto-crop already describes the visible silhouette, so old per-file
-      // vertical compensation would double-offset the character.
-      sprite.verticalBounds = [0, 1];
-    } catch (error) {
-      sprite.sheet = image;
-      sprite.crop = [0, 0, image.naturalWidth, image.naturalHeight];
-      sprite.verticalBounds = [0, 1];
-    }
-  }
-
   const bindExtraSprite = (sprite, refreshUi) => {
-    const apply = () => {
-      prepareCandidateSprite(sprite);
+    if (sprite.pixelData && sprite.sheet) return;
+    sprite.image.addEventListener("load", () => {
+      // PNGs are pre-keyed. Never strip interiors or dark fur/armor at runtime.
+      sprite.sheet = sprite.image;
+      if (!sprite.crop || sprite.crop[2] <= sprite.crop[0]) {
+        sprite.crop = [0, 0, sprite.image.naturalWidth || 320, sprite.image.naturalHeight || 360];
+      }
       if (refreshUi && spriteUiReady) {
         renderCardPortraits();
         renderDeckBuilder();
       }
-    };
-    sprite.image.addEventListener("load", apply);
+    });
     sprite.image.src = sprite.src;
-    if (sprite.image.complete && sprite.image.naturalWidth) apply();
+    if (sprite.image.complete && sprite.image.naturalWidth) {
+      sprite.sheet = sprite.image;
+      if (!sprite.crop || sprite.crop[2] <= sprite.crop[0]) {
+        sprite.crop = [0, 0, sprite.image.naturalWidth, sprite.image.naturalHeight];
+      }
+    }
   };
   for (const sprite of Object.values(EXTRA_ALLY_SPRITES)) bindExtraSprite(sprite, true);
   for (const sprite of Object.values(EXTRA_ENEMY_SPRITES)) bindExtraSprite(sprite, false);
-  for (const sprite of Object.values(MIKU_BOSS_FRAMES)) {
-    if (sprite !== MIKU_BOSS_FRAMES.idleA) bindExtraSprite(sprite, false);
+  for (const sprite of Object.values(MIKU_ENEMY_FRAMES)) {
+    bindExtraSprite(sprite, false);
   }
+  bindExtraSprite(MIKU_ALLY_ATTACK_FRAME, true);
 
   function montageCellCrop(img, index, cols = 4, rows = 2) {
     const w = img.naturalWidth || 1024;
@@ -332,8 +313,10 @@
       const fileId = id.replaceAll("_", "-");
       const entry = candidateSprite(`${prefix}-${fileId}`, { fitScale });
       into[id] = entry;
+      if (entry.pixelData && entry.sheet) return;
       const apply = () => {
-        prepareCandidateSprite(entry);
+        entry.sheet = entry.image;
+        entry.crop = [0, 0, entry.image.naturalWidth, entry.image.naturalHeight];
         if (refreshUi && spriteUiReady) {
           if (typeof renderCardPortraits === "function") renderCardPortraits();
           if (typeof renderDeckBuilder === "function") renderDeckBuilder();
@@ -449,10 +432,9 @@
         const b = pixels[p + 2];
         const min = Math.min(r, g, b);
         const max = Math.max(r, g, b);
-        const magenta = r >= 170 && b >= 170 && g <= 105 && r - g >= 65 && b - g >= 65;
-        const neutral = max - min < 24;
-        const keyedNeutral = neutral && min >= 205;
-        return magenta || keyedNeutral;
+        const magenta = r >= 180 && b >= 180 && g <= 90 && r - g >= 80 && b - g >= 80;
+        const nearWhite = min >= 232 && max - min < 14;
+        return magenta || nearWhite;
       };
       const enqueue = (index) => {
         if (index < 0 || index >= total || visited[index] || !isBackdrop(index)) return;
@@ -645,6 +627,13 @@
       projectile: true, splash: 76, poison: 5, poisonDamage: 16, unlockable: true, shot: "#b77cff",
       info: "독 물약으로 범위 피해와 지속 피해를 준다",
     },
+    {
+      id: "miku", name: "하츠네 미쿠", cost: 620, hp: 720, damage: 128,
+      speed: 36, range: 285, cooldown: 1.08, size: 66, recharge: 12.5, kind: "miku_ally",
+      projectile: true, chain: 3, chainRange: 150, splash: 58, mikuSkill: "song",
+      unlockable: true, specialUnlock: "miku_final", shot: "#48eadc",
+      info: "미쿠 라이브 최종 스테이지 보상 · 음표 연쇄 공격",
+    },
   ];
 
   const ENEMY_TYPES = {
@@ -793,10 +782,25 @@
   };
 
   Object.assign(ENEMY_TYPES, {
-    miku_diva: {
-      id: "miku_diva", name: "하츠네 미쿠", hp: 6200, damage: 152, speed: 31,
-      range: 255, cooldown: 1.08, size: 92, reward: 1200, kind: "miku_diva",
-      projectile: true, splash: 82, shot: "#41e6d5", raid: true,
+    miku_song: {
+      id: "miku_song", name: "싱어 미쿠", hp: 1850, damage: 118, speed: 34,
+      range: 280, cooldown: 1.02, size: 74, reward: 210, kind: "miku_song",
+      projectile: true, mikuSkill: "song", shot: "#48eadc",
+    },
+    miku_leek: {
+      id: "miku_leek", name: "대파 미쿠", hp: 2450, damage: 176, speed: 50,
+      range: 54, cooldown: 0.82, size: 76, reward: 250, kind: "miku_leek",
+      mikuSkill: "leek", cleave: 120,
+    },
+    miku_guard: {
+      id: "miku_guard", name: "스피커 미쿠", hp: 4300, damage: 96, speed: 22,
+      range: 235, cooldown: 1.58, size: 82, reward: 310, kind: "miku_guard",
+      projectile: true, mikuSkill: "guard", splash: 62, shot: "#ff55b8",
+    },
+    miku_cannon: {
+      id: "miku_cannon", name: "캐논 미쿠", hp: 3100, damage: 245, speed: 18,
+      range: 355, cooldown: 2.28, size: 86, reward: 360, kind: "miku_cannon",
+      projectile: true, mikuSkill: "cannon", splash: 190, shot: "#ff4faf",
     },
   });
 
@@ -867,14 +871,14 @@
   ];
 
   const MIKU_CHAPTERS = {
-    M1: "특별 무대 · 네온 라이브 침공",
+    M1: "고난도 특별 무대 · 네온 라이브 침공",
   };
   const MIKU_STAGES = [
-    S("M1-1", "첫 번째 사운드 체크", "★☆☆", 3600, 2400, 250, 13, 2.2, [["sprout", 0.48], ["spitter", 0.3], ["shell", 0.22]], null, 0.9),
-    S("M1-2", "대파 비트 러시", "★★☆", 3800, 3000, 240, 16, 2.0, [["sprout", 0.38], ["fang", 0.32], ["spitter", 0.3]], null, 1.0),
-    S("M1-3", "푸른 조명의 합주", "★★☆", 4100, 3700, 235, 18, 1.82, [["shell", 0.25], ["shaman", 0.28], ["fang", 0.25], ["sprout", 0.22]], null, 1.12),
-    S("M1-4", "네온 앙코르", "★★★", 4400, 4500, 230, 20, 1.68, [["fang", 0.24], ["shaman", 0.22], ["wraith", 0.26], ["jugger", 0.28]], null, 1.24),
-    S("M1-5", "라스트 라이브", "★★★★", 4800, 5500, 225, 23, 1.55, [["shell", 0.2], ["spitter", 0.2], ["shaman", 0.2], ["wraith", 0.2], ["jugger", 0.2]], null, 1.38),
+    Object.assign(S("M1-1", "싱어의 사운드 체크", "★★★★", 4000, 5200, 260, 18, 1.7, [["sprout", 0.38], ["spitter", 0.25], ["miku_song", 0.37]], null, 1.25, 4), { mikuFinale: ["miku_song"] }),
+    Object.assign(S("M1-2", "대파 비트 러시", "★★★★", 4200, 6500, 255, 21, 1.5, [["fang", 0.28], ["spitter", 0.2], ["miku_song", 0.2], ["miku_leek", 0.32]], null, 1.45, 4), { mikuFinale: ["miku_song", "miku_leek"] }),
+    Object.assign(S("M1-3", "스피커 방벽 합주", "★★★★★", 4400, 8000, 250, 24, 1.35, [["shell", 0.22], ["shaman", 0.18], ["miku_leek", 0.25], ["miku_guard", 0.35]], null, 1.65, 5), { mikuFinale: ["miku_leek", "miku_guard"] }),
+    Object.assign(S("M1-4", "네온 캐논 앙코르", "★★★★★", 4650, 9800, 245, 27, 1.2, [["wraith", 0.18], ["jugger", 0.18], ["miku_song", 0.16], ["miku_guard", 0.2], ["miku_cannon", 0.28]], null, 1.86, 5), { mikuFinale: ["miku_song", "miku_guard", "miku_cannon"] }),
+    Object.assign(S("M1-5", "라스트 라이브 · 미쿠 영입전", "★★★★★", 5000, 12500, 260, 30, 1.05, [["miku_song", 0.2], ["miku_leek", 0.22], ["miku_guard", 0.2], ["miku_cannon", 0.18], ["nightlord", 0.2]], null, 2.1, 6), { mikuFinale: ["miku_song", "miku_leek", "miku_guard", "miku_cannon"], rewardUnit: "miku" }),
   ];
 
   const SAVE_KEY = "fur-front-unlock";
@@ -918,11 +922,11 @@
       const ownedAll = new Set([...ownedCampaign, ...ownedRift]);
       const requestedDeck = Array.isArray(saved.deck) ? migrateUnitIds(saved.deck) : units;
       const deck = [...new Set(requestedDeck)]
-        .filter((id) => ownedCampaign.has(id))
+        .filter((id) => ownedAll.has(id))
         .slice(0, MAX_DECK_SIZE);
       const requestedRiftDeck = Array.isArray(saved.riftDeck) ? migrateUnitIds(saved.riftDeck) : riftUnits.slice(0, 5);
       const riftDeck = [...new Set(requestedRiftDeck)]
-        .filter((id) => ownedRift.has(id))
+        .filter((id) => ownedAll.has(id))
         .slice(0, MAX_DECK_SIZE);
       const savedLevels = saved.levels && typeof saved.levels === "object" ? saved.levels : {};
       const allOwned = [...ownedAll];
@@ -1015,7 +1019,7 @@
   }
 
   function activeOwnedIds() {
-    return isRiftMode() ? state.profile.riftUnits.slice() : state.profile.units.slice();
+    return [...new Set([...state.profile.units, ...state.profile.riftUnits])];
   }
 
   function activeChestCount() {
@@ -1028,13 +1032,13 @@
   }
 
   function modeUnits() {
-    return UNIT_TYPES.filter((unit) => isRiftMode() ? unit.rift : !unit.rift);
+    return UNIT_TYPES;
   }
 
   function unlockablePool() {
     // 상자는 모드별로 분리 (신월 상자는 신규만, 본편 상자는 본편만)
     if (isRiftMode()) return UNIT_TYPES.filter((unit) => unit.rift && unit.unlockable);
-    return UNIT_TYPES.filter((unit) => !unit.rift && unit.unlockable);
+    return UNIT_TYPES.filter((unit) => !unit.rift && unit.unlockable && !unit.specialUnlock);
   }
 
   function unitLevel(id) {
@@ -1209,7 +1213,7 @@
     dangerLevel: 0,
     castleHint: false,
     mikuTowerBroken: false,
-    mikuBossUid: null,
+    mikuBossUids: [],
     mikuFinaleDefeated: false,
     profile: loadProfile(),
   };
@@ -1539,11 +1543,8 @@
     sound("shoot");
   }
 
-  function attackMikuBoss(actor, target, baseHit) {
-    const skills = ["song", "leek", "guard", "cannon"];
-    const skill = skills[(actor.mikuAttackIndex || 0) % skills.length];
-    actor.mikuAttackIndex = (actor.mikuAttackIndex || 0) + 1;
-    actor.mikuSkill = skill;
+  function attackMikuFighter(actor, target, baseHit) {
+    const skill = actor.mikuSkill || "song";
     actor.attackTimer = attackDelay(actor);
     actor.attackDuration = { song: 0.62, leek: 0.56, guard: 0.74, cannon: 0.92 }[skill];
     actor.attackAnim = actor.attackDuration;
@@ -1598,8 +1599,8 @@
   }
 
   function attack(actor, target, baseHit) {
-    if (actor.id === "miku_diva") {
-      attackMikuBoss(actor, target, baseHit);
+    if (actor.mikuSkill) {
+      attackMikuFighter(actor, target, baseHit);
       return;
     }
     actor.attackTimer = attackDelay(actor);
@@ -1844,7 +1845,7 @@
 
   function damage(target, amount, x, y, heavy = false, dot = false) {
     if (!target || target.dead) return;
-    if (target.id === "miku_diva" && target.mikuGuardTimer > 0) amount *= 0.46;
+    if (target.mikuGuardTimer > 0) amount *= 0.46;
     if (target.team === "ally") {
       const guarded = state.units.some((unit) => !unit.dead && unit.guard && Math.abs(unit.x - target.x) < 135);
       if (guarded) amount *= 0.72;
@@ -1881,11 +1882,18 @@
         state.command = Math.min(state.commandMax, state.command + 7 + Math.min(8, state.combo));
         floating(target.x, target.y - target.size, `+${reward}G`, "#ffe253", 17);
         if (state.combo >= 3) floating(target.x, target.y - target.size - 25, `${state.combo} COMBO`, "#ff9ee5", 16);
-        if (isMikuMode() && target.id === "miku_diva") {
-          state.mikuFinaleDefeated = true;
-          showMessage("FINAL ENCORE CLEAR · 미쿠 격파!", 3);
+        if (isMikuMode() && state.mikuBossUids.includes(target.uid)) {
+          const remaining = state.mikuBossUids.some((uid) => {
+            const fighter = state.enemies.find((enemy) => enemy.uid === uid);
+            return fighter && !fighter.dead && fighter.uid !== target.uid;
+          });
           burst(target.x, target.y - target.size * 0.55, "#55f4e6", 42, 230);
-          state.flash = Math.max(state.flash, 0.48);
+          state.flash = Math.max(state.flash, 0.32);
+          if (!remaining) {
+            state.mikuFinaleDefeated = true;
+            showMessage("FINAL ENCORE CLEAR · 미쿠 팀 격파!", 3);
+            state.flash = Math.max(state.flash, 0.58);
+          }
         }
       }
     }
@@ -1903,14 +1911,18 @@
     burst(ENEMY_BASE_X, GROUND - 135, "#48eadc", 38, 210);
     state.shake = 1.35;
     state.flash = 0.34;
-    spawnEnemy("miku_diva");
-    const boss = state.enemies[state.enemies.length - 1];
-    if (boss?.id === "miku_diva") {
-      boss.x = BATTLE_END - Math.round(18 * VIEW_SCALE);
-      boss.y = GROUND;
-      state.mikuBossUid = boss.uid;
-    }
-    showMessage("성채 파괴! FINAL ENCORE · 하츠네 미쿠 등장!", 3.2);
+    const finale = currentStage().mikuFinale || ["miku_song"];
+    state.mikuBossUids = [];
+    finale.forEach((kind, index) => {
+      spawnEnemy(kind);
+      const boss = state.enemies[state.enemies.length - 1];
+      if (!boss || boss.id !== kind) return;
+      boss.x = BATTLE_END - Math.round((20 + index * 58) * VIEW_SCALE);
+      boss.y = GROUND + ((index % 3) - 1) * Math.round(11 * VIEW_SCALE);
+      boss.lane = (index % 3) - 1;
+      state.mikuBossUids.push(boss.uid);
+    });
+    showMessage(`성채 파괴! FINAL ENCORE · 공격별 미쿠 ${state.mikuBossUids.length}명 등장!`, 3.2);
   }
 
   function damageBase(team, amount) {
@@ -2092,8 +2104,26 @@
       const clearMaterials = chestsGained >= 2 ? 2 : 1;
       state.profile.gold += clearGold;
       state.profile.materials += clearMaterials;
-      progressionReward = `<br />보급 골드 <b>${clearGold}G</b> · 강화석 <b>${clearMaterials}개</b>`;
+      let recruitText = "";
+      if (stage.rewardUnit) {
+        const recruit = UNIT_TYPES.find((unit) => unit.id === stage.rewardUnit);
+        if (recruit && !ownsUnit(recruit.id)) {
+          const owned = recruit.rift ? state.profile.riftUnits : state.profile.units;
+          owned.push(recruit.id);
+          state.profile.levels[recruit.id] = 1;
+          const deck = activeDeckIds();
+          if (deck.length < MAX_DECK_SIZE) deck.push(recruit.id);
+          recruitText = `<br /><b>특별 대원 ${recruit.name} 영입!</b>`;
+        } else if (recruit) {
+          state.profile.gold += 300;
+          state.profile.materials += 12;
+          recruitText = `<br />${recruit.name} 중복 보상 · <b>300G + 강화석 12개</b>`;
+        }
+      }
+      progressionReward = `<br />보급 골드 <b>${clearGold}G</b> · 강화석 <b>${clearMaterials}개</b>${recruitText}`;
       saveProfile();
+      buildCards();
+      renderDeckBuilder();
     }
     const finaleLabel = isMikuMode() ? "FINAL LIVE 완전 돌파!" : (isRiftMode() ? "신월 전선 완전 돌파!" : "전선 완전 돌파!");
     ui.overlayTitle.textContent = win
@@ -2160,7 +2190,7 @@
       nextId: 1,
       castleHint: false,
       mikuTowerBroken: false,
-      mikuBossUid: null,
+      mikuBossUids: [],
       mikuFinaleDefeated: false,
     });
     ui.overlay.classList.add("hidden");
@@ -2205,18 +2235,24 @@
   }
 
   function updateUI() {
-    const mikuBoss = isMikuMode() && state.mikuBossUid
-      ? state.enemies.find((enemy) => enemy.uid === state.mikuBossUid)
-      : null;
-    const displayEnemyHp = mikuBoss ? Math.max(0, mikuBoss.hp) : state.enemyHp;
-    const displayEnemyMaxHp = mikuBoss ? mikuBoss.maxHp : state.enemyMaxHp;
+    const mikuBosses = isMikuMode() && state.mikuBossUids.length
+      ? state.mikuBossUids
+        .map((uid) => state.enemies.find((enemy) => enemy.uid === uid))
+        .filter(Boolean)
+      : [];
+    const displayEnemyHp = mikuBosses.length
+      ? mikuBosses.reduce((sum, enemy) => sum + Math.max(0, enemy.hp), 0)
+      : state.enemyHp;
+    const displayEnemyMaxHp = mikuBosses.length
+      ? mikuBosses.reduce((sum, enemy) => sum + enemy.maxHp, 0)
+      : state.enemyMaxHp;
     ui.playerHp.textContent = `${Math.ceil(state.playerHp)} / ${state.playerMaxHp}`;
     ui.enemyHp.textContent = `${Math.ceil(displayEnemyHp)} / ${displayEnemyMaxHp}`;
     ui.playerHpBar.style.width = `${state.playerHp / state.playerMaxHp * 100}%`;
     ui.enemyHpBar.style.width = `${displayEnemyMaxHp ? displayEnemyHp / displayEnemyMaxHp * 100 : 0}%`;
     if (ui.enemyBaseName) {
       ui.enemyBaseName.textContent = isMikuMode()
-        ? (state.mikuTowerBroken ? "하츠네 미쿠" : "미쿠 라이브 성채")
+        ? (state.mikuTowerBroken ? `공격별 미쿠 팀 ×${state.mikuBossUids.length}` : "미쿠 라이브 성채")
         : "가시왕 성채";
     }
     ui.money.textContent = Math.floor(state.money);
@@ -2386,14 +2422,12 @@
     ui.deckSummary.textContent = countText;
     ui.profileGold.textContent = state.profile.gold;
     ui.materialCount.textContent = state.profile.materials;
-    if (ui.deckKicker) ui.deckKicker.textContent = isRiftMode() ? "NEW MOON SQUAD" : "MOONLIGHT SQUAD";
-    if (ui.deckTitle) ui.deckTitle.textContent = isRiftMode() ? "신월 덱 편성" : "출격 덱 편성";
+    if (ui.deckKicker) ui.deckKicker.textContent = isRiftMode() ? "NEW MOON MIXED SQUAD" : (isMikuMode() ? "MIKU LIVE MIXED SQUAD" : "MOONLIGHT MIXED SQUAD");
+    if (ui.deckTitle) ui.deckTitle.textContent = isRiftMode() ? "신월 혼합 덱 편성" : (isMikuMode() ? "미쿠 라이브 덱 편성" : "본편 혼합 덱 편성");
     if (ui.deckSubtitle) {
-      ui.deckSubtitle.textContent = isRiftMode()
-        ? "신월 전선에서 얻은 대원만 편성할 수 있습니다."
-        : "본편에서 얻은 대원만 편성할 수 있습니다.";
+      ui.deckSubtitle.textContent = "본편·신월에서 보유한 모든 대원을 함께 편성할 수 있습니다.";
     }
-    if (ui.deckBtnLabel) ui.deckBtnLabel.textContent = isRiftMode() ? "신월 덱 편성" : "출격 덱 편성";
+    if (ui.deckBtnLabel) ui.deckBtnLabel.textContent = isRiftMode() ? "신월 혼합 덱" : "혼합 덱 편성";
   }
 
   function convertStoneToGold() {
@@ -2769,6 +2803,9 @@
         lastChapter = chapter;
       }
       const locked = index > unlocked;
+      const rewardUnit = stage.rewardUnit
+        ? UNIT_TYPES.find((unit) => unit.id === stage.rewardUnit)
+        : null;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "stage-pick";
@@ -2777,7 +2814,7 @@
       btn.disabled = locked;
       btn.innerHTML = `
         <span class="code">${stage.id}</span>
-        <span><strong>${locked ? "잠김" : stage.name}</strong><small>${locked ? "이전 스테이지 클리어 필요" : stage.stars}</small></span>
+        <span><strong>${locked ? "잠김" : stage.name}</strong><small>${locked ? "이전 스테이지 클리어 필요" : `${stage.stars}${rewardUnit ? ` · 보상: ${rewardUnit.name}` : ""}`}</small></span>
         <span class="mark">${index === state.stageIndex ? "▶" : (index < unlocked ? "OK" : "LOCK")}</span>`;
       btn.addEventListener("click", () => {
         if (locked) return;
@@ -3402,68 +3439,24 @@
     return true;
   }
 
-  function mikuBossFrame(actor) {
-    const idleFrame = Math.floor(actor.age * 2.4) % 2
-      ? MIKU_BOSS_FRAMES.idleB
-      : MIKU_BOSS_FRAMES.idleA;
-    if (actor.attackAnim > 0 && MIKU_BOSS_FRAMES[actor.mikuSkill]?.sheet) {
-      return MIKU_BOSS_FRAMES[actor.mikuSkill];
+  function mikuFighterFrame(actor) {
+    if (actor.team === "ally") {
+      return actor.attackAnim > 0 && MIKU_ALLY_ATTACK_FRAME.sheet
+        ? MIKU_ALLY_ATTACK_FRAME
+        : EXTRA_ALLY_SPRITES.miku;
     }
-    if (actor.mikuGuardTimer > 0 && MIKU_BOSS_FRAMES.guard.sheet) {
-      return MIKU_BOSS_FRAMES.guard;
-    }
-    return idleFrame.sheet ? idleFrame : MIKU_BOSS_FRAMES.idleA;
-  }
-
-  function fighterMotion(actor) {
-    const kind = actor.kind;
-    const id = actor.id;
-    const fly = kind === "bat" || kind === "raven" || kind === "frost" || kind === "knockback"
-      || id === "gale_hawk" || id === "frost_owl" || id === "bloodwing_bat" || id === "bone_raven";
-    const heavy = Boolean(actor.raid)
-      || ["titan", "brute", "jugger", "rhino", "shield", "shell", "boss", "king", "nightlord"].includes(kind);
-    const hoppy = ["scout", "moco", "assassin", "berserker", "swarm", "wolf", "wraith"].includes(kind);
-    const drummer = kind === "drummer";
-    const ranger = actor.id === "miku_diva" ? actor.mikuSkill !== "leek" : Boolean(actor.projectile);
-    const t = actor.age + actor.seed;
-    const spd = Math.max(16, actor.speed || 40);
-    const freq = fly ? 7.4 : hoppy ? 14.2 : heavy ? 5.1 : drummer ? 8.4 : 9.6;
-    const walk = actor.moving && !actor.dead ? Math.sin(t * freq * (spd / 48)) : 0;
-    const idle = Math.sin(t * (fly ? 3.6 : drummer ? 6.2 : 2.7));
-    const attackProgress = actor.attackAnim > 0 ? 1 - actor.attackAnim / actor.attackDuration : 0;
-    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
-    const hop = actor.dead
-      ? 0
-      : (fly
-        ? 11 + idle * 5.5 + Math.abs(walk) * 3
-        : actor.moving
-          ? Math.abs(walk) * (hoppy ? 9 : heavy ? 3.5 : drummer ? 6.5 : 5.5)
-          : (idle + 1) * (drummer ? 1.4 : 0.75));
-    const squashX = (actor.moving
-      ? 1 + Math.abs(walk) * (heavy ? 0.045 : 0.03) - (walk > 0.55 ? 0.05 : 0)
-      : 1 + idle * 0.012) * (1 + attack * (ranger ? 0.03 : 0.08));
-    const squashY = (actor.moving
-      ? 1 - Math.abs(walk) * (heavy ? 0.04 : fly ? 0.06 : 0.025) + (walk > 0.55 ? 0.05 : 0)
-      : fly ? 1 + Math.sin(t * 8.5) * 0.035 : 1 - idle * 0.01) * (1 + attack * (ranger ? -0.06 : -0.05));
-    const tilt = fly
-      ? walk * 0.05 + idle * 0.01
-      : actor.moving
-        ? walk * (heavy ? 0.012 : hoppy ? 0.038 : 0.024)
-        : idle * 0.006;
-    const lunge = attack * (ranger ? -9 : heavy ? 18 : hoppy ? 16 : 13) * actor.dir;
-    const trail = fly || hoppy ? Math.abs(walk) > 0.32 : Math.abs(walk) > 0.68;
-    return { walk, idle, attackProgress, attack, hop, squashX, squashY, tilt, lunge, trail, fly };
+    return MIKU_ENEMY_FRAMES[actor.mikuSkill] || MIKU_ENEMY_FRAMES.song;
   }
 
   function drawPixelFighter(actor) {
     const ally = actor.team === "ally";
     const extraAllySprite = ally
-      ? (actor.rift ? RIFT_ALLY_SPRITES[actor.id] : EXTRA_ALLY_SPRITES[actor.id])
+      ? (actor.id === "miku" ? mikuFighterFrame(actor) : (actor.rift ? RIFT_ALLY_SPRITES[actor.id] : EXTRA_ALLY_SPRITES[actor.id]))
       : null;
     const extraEnemySprite = ally
       ? null
-      : (actor.id === "miku_diva"
-        ? mikuBossFrame(actor)
+      : (actor.mikuSkill
+        ? mikuFighterFrame(actor)
         : (actor.rift ? RIFT_ENEMY_SPRITES[actor.id] : EXTRA_ENEMY_SPRITES[actor.id]));
     // Extra sprite registered but not loaded yet → fall through to atlas instead of skipping draw.
     const extraReady = (extraAllySprite && extraAllySprite.sheet) || (extraEnemySprite && extraEnemySprite.sheet);
@@ -3493,13 +3486,21 @@
     const sourceY = crop[1];
     const sourceW = crop[2] - crop[0];
     const sourceH = crop[3] - crop[1];
-    const motion = fighterMotion(actor);
+    const walk = actor.moving ? Math.sin(actor.age * actor.speed * 0.2 + actor.seed) : 0;
+    const idle = Math.sin(actor.age * 2.8 + actor.seed);
+    const attackProgress = actor.attackAnim > 0
+      ? 1 - actor.attackAnim / actor.attackDuration
+      : 0;
+    const attack = actor.attackAnim > 0 ? Math.sin(attackProgress * Math.PI) : 0;
     const deathT = clamp(actor.death / 0.7, 0, 1);
     const drawScale = (extraAllySprite?.fitScale || extraEnemySprite?.fitScale || 1);
     const drawH = Math.round(actor.size * (ally ? 3.45 : 3.35) * drawScale);
     const drawW = Math.round(drawH * sourceW / sourceH);
-    const jump = Math.round(motion.hop);
-    const lunge = Math.round(motion.lunge);
+    const jump = actor.dead ? 0 : Math.round(
+      actor.moving ? Math.abs(walk) * 5 : (idle + 1) * 0.7
+    );
+    const rangedPose = actor.mikuSkill ? actor.mikuSkill !== "leek" : actor.projectile;
+    const lunge = Math.round(attack * (rangedPose ? -4 : 13) * actor.dir);
     const recoilDir = actor.team === "ally" ? -1 : 1;
     const recoilOffset = Math.round(recoilDir * actor.recoil * 38);
     // Quantized spawn scaling keeps square sprite pixels from shimmering.
@@ -3507,15 +3508,14 @@
     const spawnScale = actor.spawnAnim >= 0.999
       ? 1
       : Math.max(0.25, Math.round(rawSpawnScale * 8) / 8);
-    const flipSpriteX = Boolean(extraEnemySprite?.flipX);
+    const flipSpriteX = Boolean(extraAllySprite?.flipX || extraEnemySprite?.flipX);
     const verticalBounds = extraAllySprite?.verticalBounds || extraEnemySprite?.verticalBounds || [0, 1];
     const groundOffset = Math.round(drawH * Math.max(0, 1 - verticalBounds[1]));
     const visibleTop = Math.round(-drawH + drawH * verticalBounds[0] + groundOffset);
 
     ctx.save();
     ctx.translate(Math.round(actor.x + lunge + recoilOffset), Math.round(actor.y - jump));
-    ctx.scale(spawnScale * motion.squashX, spawnScale * motion.squashY);
-    ctx.rotate(motion.tilt);
+    ctx.scale(spawnScale, spawnScale);
     if (flipSpriteX) ctx.scale(-1, 1);
     ctx.globalAlpha = actor.dead ? 1 - deathT : 1;
     if (actor.dead) {
@@ -3524,18 +3524,6 @@
     }
 
     pixelRect(-drawW * 0.38, 2 + jump, drawW * 0.76, 8, "rgba(21,30,24,.28)");
-    if (actor.moving && motion.trail) {
-      ctx.save();
-      ctx.globalAlpha = motion.fly ? 0.18 : 0.12;
-      ctx.drawImage(
-        sheet,
-        sourceX, sourceY, sourceW, sourceH,
-        Math.round(-drawW / 2 - 7 * actor.dir),
-        Math.round(-drawH + groundOffset + (motion.fly ? 5 : 0)),
-        drawW, drawH
-      );
-      ctx.restore();
-    }
     if (actor.hitFlash > 0) {
       ctx.filter = "brightness(2.4) saturate(.2)";
     } else if (actor.tint && (!extraSheet || extraAllySprite?.allowTint || extraEnemySprite?.allowTint)) {
@@ -3550,7 +3538,7 @@
     ctx.filter = "none";
 
     if (actor.attackAnim > 0 && actor.projectile) {
-      const charge = Math.sin(motion.attackProgress * Math.PI);
+      const charge = Math.sin(attackProgress * Math.PI);
       const front = drawW * 0.47;
       pixelRect(front - 4, -drawH * 0.63 - 4, 8, 8, actor.shot || (actor.kind === "mage" ? "#ffe26a" : "#a8ec73"));
       if (charge > 0.45) {
